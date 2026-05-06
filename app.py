@@ -17,7 +17,6 @@ app.secret_key = os.environ.get('SECRET_KEY', 'a-very-secret-key-for-session')
 
 DATABASE = 'wordpop.db'
 
-# ------------------ 数据库工具 ------------------
 def get_db():
     """获取当前线程的数据库连接"""
     if 'db' not in g:
