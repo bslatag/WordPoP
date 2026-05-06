@@ -11,10 +11,13 @@ def index():
 
 @app.route('/study')
 def study():
-    df = pd.read_excel("word.xls")
-    word_list = df.to_dict('records')
-    random.shuffle(word_list)
-    return render_template('study.html', words=word_list)
+     try:
+        df = pd.read_excel("word.xls")
+        word_list = df.to_dict('records')
+        random.shuffle(word_list)
+        return render_template('study.html', words=word_list)
+    except Exception as e:
+        return f"<h1>Study 页面加载失败</h1><pre>{str(e)}</pre>", 500
 
 @app.route('/writing')
 def writing():
