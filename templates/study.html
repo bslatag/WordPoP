@@ -133,15 +133,30 @@ async function checkAndPromptLogin() { ... }
 
 // 加载学习单词
 async function initStudy() {
-  const data = await fetch('/api/study-words').then(r=>r.json());
-  currentGroup = data;
-  index = 0;
-  updateCount();
-  showWord();
-  const starred = await fetch('/api/word-list/starred').then(r=>r.json());
-  setStarred(starred);
+    const res = await fetch('/api/study-words');
+    const data = await res.json();
+    currentGroup = data || [];
+    if (currentGroup.length === 0) {
+        // 避免弹窗，显示提示
+        document.getElementById('word').textContent = '暂无单词';
+        document.getElementById('phonetic').textContent = '';
+        document.getElementById('meaning').textContent = '请先在默写本中添加单词';
+        return;
+    }
+    index = 0;
+    updateCount();
+    showWord();
+    // 加载收藏列表
+    fetch('/api/word-list/starred').then(r=>r.json()).then(list=>{
+        setStarred(list);
+        // 高亮当前星标
+        if (currentGroup[index]) {
+            const sb = document.getElementById('starBtn');
+            if (list.includes(currentGroup[index].单词)) sb.classList.add('active');
+            else sb.classList.remove('active');
+        }
+    });
 }
-
 // 登录提示按钮
 document.getElementById('laterLoginBtn').onclick = () => document.getElementById('loginPromptModal').classList.remove('show');
 document.getElementById('goLoginBtn').onclick = () => window.location.href = '/login';
