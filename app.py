@@ -6,11 +6,8 @@ import sqlite3
 import re
 import numpy as np
 import cv2
-import pytesseract
+from paddleocr import PaddleOCR
 from PIL import Image
-
-# 指定 Tesseract 可执行文件路径（Render 上安装后的默认位置）
-pytesseract.pytesseract.tesseract_cmd = '/usr/bin/tesseract'
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'a-very-secret-key-for-session')
@@ -30,7 +27,6 @@ def close_connection(exception):
     if db is not None:
         db.close()
 
-# 数据库只初始化一次
 db_initialized = False
 
 @app.before_request
@@ -228,7 +224,16 @@ def api_check_word():
         return jsonify({'valid': True, 'meaning': meaning})
     return jsonify({'valid': False, 'meaning': ''})
 
-# OCR 识别（优化后只保留这一个）
+# ------------------ PaddleOCR 初始化 ------------------
+ocr_engine = None
+
+def get_ocr():
+    global ocr_engine
+    if ocr_engine is None:
+        ocr_engine = PaddleOCR(lang='en', use_angle_cls=False, det_db_thresh=0.3, rec_batch_num=1)
+    return ocr_engine
+
+# ------------------ OCR 路由 ------------------
 @app.route('/api/ocr', methods=['POST'])
 def api_ocr():
     if 'image' not in request.files:
@@ -240,32 +245,37 @@ def api_ocr():
     if img is None:
         return jsonify({'words': [], 'error': '图片无法解析'}), 400
 
-    # 速度优化
-    h, w = img.shape[:2]
-    max_size = 1000
-    if w > max_size:
-        scale = max_size / w
-        new_w = max_size
-        new_h = int(h * scale)
-        img = cv2.resize(img, (new_w, new_h), interpolation=cv2.INTER_AREA)
+    # PaddleOCR 直接接受图像数组，无需预处理
+    engine = get_ocr()
+    result = engine.ocr(img, det=True, rec=True)
 
-    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    _, thresh = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-    pil_img = Image.fromarray(thresh)
-    custom_config = r'--psm 13 -c tessedit_char_whitelist=abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
-    text = pytesseract.image_to_string(pil_img, lang='eng', config=custom_config)
+    # 提取文本：result 格式 [ [[box, (text, confidence)], ...], ...]
+    candidates = []
+    if result and isinstance(result, list):
+        for line in result:
+            if not line:
+                continue
+            for item in line:
+                text = item[1][0]
+                if re.match(r'^[a-zA-Z]{2,20}$', text):
+                    candidates.append(text.lower())
 
-    candidates = re.findall(r'[a-zA-Z]{2,}', text)
+    # 词库过滤（保留在 Excel 中的词）
     df = pd.read_excel("word.xls")
     valid_words = set(df['单词'].str.lower())
-    result = [w.lower() for w in candidates if w.lower() in valid_words]
+    filtered = [w for w in candidates if w in valid_words]
     seen = set()
     unique = []
-    for w in result:
+    for w in filtered:
         if w not in seen:
             seen.add(w)
             unique.append(w)
-    return jsonify({'words': unique})
+
+    return jsonify({
+        'words': unique,
+        'raw_count': len(candidates),
+        'filtered_count': len(unique)
+    })
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
