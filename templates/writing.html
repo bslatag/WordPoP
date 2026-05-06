@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>默写本</title>
-<link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=ZCOOL+KuaiLe&display=swap" rel="stylesheet">
+<link href="https://fonts.loli.net/css2?family=Fredoka+One&family=ZCOOL+KuaiLe&display=swap" rel="stylesheet">
 <style>
 :root {
   --bg-color: #B9C7F8;
@@ -63,17 +63,17 @@ body {
   align-items: center;
   justify-content: center;
 }
-.upload-btn {
+.list-btn {
   position: absolute;
-  width: 44px; height: 44px;
+  width: 40px; height: 40px;
   border-radius: 50%;
   background: var(--accent-cyan);
   color: #fff;
   border: 3px solid var(--border-color);
-  font-size: 28px;         
+  font-size: 24px;
   cursor: pointer;
-  display: none;
   z-index: 10;
+  display: none;
   align-items: center;
   justify-content: center;
   line-height: 1;
@@ -99,6 +99,7 @@ body {
   border: 3px solid var(--border-color);
   border-radius: 16px;
   padding: 16px;
+  position: relative;
   display: none;
 }
 .word-item {
@@ -112,6 +113,16 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+.word-item .del-btn {
+  background: var(--accent-pink);
+  color: white;
+  border: none;
+  width: 30px; height: 30px;
+  border-radius: 50%;
+  font-size: 16px;
+  cursor: pointer;
+  margin-left: 10px;
 }
 .star {
   font-size: 22px;
@@ -130,46 +141,45 @@ body {
   cursor: pointer;
   display: none;
 }
-/* 轮默次数选择 */
-.round-selector {
+.round-selector, .manual-add {
   display: none;
   align-items: center;
   gap: 10px;
   margin-top: 10px;
   font-size: 20px;
 }
-.round-selector select {
-  font-size: 20px;
-  padding: 5px 10px;
-  border-radius: 8px;
-  border: 2px solid var(--border-color);
+.round-selector select, .manual-add input {
+  font-size: 20px; padding: 5px 10px;
+  border-radius: 8px; border: 2px solid var(--border-color);
   font-family: 'ZCOOL KuaiLe', cursive;
-}
-/* 手动添加区域 */
-.manual-add {
-  display: none;
-  gap: 10px;
-  justify-content: center;
-  margin-top: 10px;
-}
-.manual-add input {
-  font-size: 20px;
-  padding: 8px;
-  border-radius: 8px;
-  border: 2px solid var(--border-color);
-  width: 180px;
-  font-family: 'Fredoka One', cursive;
 }
 .manual-add button {
-  font-size: 20px;
-  padding: 8px 16px;
-  border-radius: 8px;
-  border: 2px solid var(--border-color);
-  background: var(--accent-cyan);
-  color: var(--text-color);
-  cursor: pointer;
-  font-family: 'ZCOOL KuaiLe', cursive;
+  font-size: 20px; padding: 8px 16px;
+  border-radius: 8px; border: 2px solid var(--border-color);
+  background: var(--accent-cyan); color: var(--text-color);
+  cursor: pointer; font-family: 'ZCOOL KuaiLe', cursive;
 }
+.modal {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(45,52,54,0.8); display: none;
+  align-items: center; justify-content: center; z-index: 999;
+  backdrop-filter: blur(5px);
+}
+.modal.show { display: flex; }
+.modal-content {
+  background: white; border: 4px solid var(--border-color);
+  border-radius: 30px; padding: 40px; text-align: center;
+  box-shadow: 15px 15px 0 rgba(0,0,0,0.2);
+}
+.modal-content h3 { font-size: 28px; color: var(--text-color); margin-bottom: 20px; }
+.modal-btns { display: flex; gap: 20px; justify-content: center; margin-top: 20px; }
+.modal-btn {
+  padding: 15px 30px; border-radius: 15px;
+  border: 3px solid var(--border-color); font-size: 20px;
+  font-family: 'ZCOOL KuaiLe', cursive; cursor: pointer;
+}
+.modal-btn.primary { background: var(--accent-pink); color: white; }
+.modal-btn.secondary { background: var(--card-color); color: var(--text-color); }
 #fileInput { display: none; }
 </style>
 </head>
@@ -180,116 +190,159 @@ body {
     <button class="back-btn" id="backBtn" onclick="goBack()">✕</button>
   </div>
 
-  <button class="upload-btn" id="uploadBtn" style="top: 40px; right: 20px;">＋</button>
-  <button class="upload-btn" id="cameraBtn" style="top: 90px; right: 20px;">📸</button>
-
-  <div id="cameraModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:#000; z-index:1000; flex-direction:column; align-items:center; justify-content:center;">
-    <video id="cameraVideo" autoplay playsinline style="width:100%; max-width:500px; border-radius:16px;"></video>
-    <canvas id="cameraCanvas" style="display:none;"></canvas>
-    <div style="margin-top:20px; display:flex; gap:20px;">
-      <button id="captureBtn" style="padding:14px 28px; background:var(--accent-cyan); border:3px solid var(--border-color); border-radius:16px; font-size:20px; color:var(--text-color);">拍照</button>
-      <button id="closeCameraBtn" style="padding:14px 28px; background:var(--accent-pink); border:3px solid var(--border-color); border-radius:16px; font-size:20px; color:#fff;">关闭</button>
-    </div>
-  </div>
-
   <div class="card" onclick="showList('starred')"><h2>我的收藏</h2></div>
   <div class="card" onclick="showList('learned')"><h2>已学单词</h2></div>
   <div class="card" onclick="showList('selfstudy')"><h2>默写自习室</h2></div>
 
-  <div class="list-container" id="listBox"></div>
-  
+  <div class="list-container" id="listBox">
+    <button class="list-btn" id="uploadBtn" style="top: -12px; right: -12px;">＋</button>
+    <button class="list-btn" id="cameraBtn" style="top: -12px; right: 36px;">📸</button>
+  </div>
+
   <div class="manual-add" id="manualAddBox">
     <input type="text" id="manualAddInput" placeholder="添加英文单词">
     <button id="manualAddBtn">添加</button>
-  </div>
-  
-  <div class="round-selector" id="roundSelectorBox">
-    轮默次数：
-    <select id="roundsSelect">
-      <option value="1">1</option>
-      <option value="2">2</option>
-      <option value="3" selected>3</option>
-      <option value="4">4</option>
-      <option value="5">5</option>
-    </select>
   </div>
 
   <button class="start-btn" id="startBtn">开始默写</button>
 </div>
 
+<!-- 默写选项模态框 -->
+<div class="modal" id="practiceModal">
+  <div class="modal-content">
+    <h3>默写设置</h3>
+    <div style="margin: 10px 0;">
+      <label>轮默次数：</label>
+      <select id="modalRoundsSelect" style="font-size:20px; padding:5px;">
+        <option value="1">1</option><option value="2">2</option>
+        <option value="3" selected>3</option>
+        <option value="4">4</option><option value="5">5</option>
+      </select>
+    </div>
+    <div style="margin: 10px 0;">
+      <label>默写顺序：</label>
+      <select id="modalOrderSelect" style="font-size:20px; padding:5px;">
+        <option value="random">随机</option>
+        <option value="sequential">顺序</option>
+      </select>
+    </div>
+    <div class="modal-btns">
+      <button class="modal-btn secondary" id="cancelPracticeBtn">取消</button>
+      <button class="modal-btn primary" id="confirmPracticeBtn">开始</button>
+    </div>
+  </div>
+</div>
+
+<!-- 相机预览模态框 -->
+<div id="cameraModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:#000; z-index:1000; flex-direction:column; align-items:center; justify-content:center;">
+  <video id="cameraVideo" autoplay playsinline style="width:100%; max-width:500px; border-radius:16px;"></video>
+  <canvas id="cameraCanvas" style="display:none;"></canvas>
+  <div style="margin-top:20px; display:flex; gap:20px;">
+    <button id="captureBtn" style="padding:14px 28px; background:var(--accent-cyan); border:3px solid var(--border-color); border-radius:16px; font-size:20px; color:var(--text-color);">拍照</button>
+    <button id="closeCameraBtn" style="padding:14px 28px; background:var(--accent-pink); border:3px solid var(--border-color); border-radius:16px; font-size:20px; color:#fff;">关闭</button>
+  </div>
+</div>
+
 <input type="file" id="fileInput" accept="image/*">
 
-<script src="https://cdn.jsdelivr.net/npm/tesseract.js@2/dist/tesseract.min.js"></script>
+<!-- Tesseract.js v5 -->
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script>
-const WORD_MAP = JSON.parse(localStorage.getItem('all_words_json') || '[]').reduce((m, v) => {
-  m[v.单词] = v.释义;
-  return m;
-}, {});
+// ===================== 全局变量 =====================
+let currentType = '';
+let currentView = 'cards'; // 'cards' or 'list'
 
+// ===================== 工具函数 =====================
 function get(key) {
   try { return JSON.parse(localStorage.getItem(key) || '[]'); } catch (e) { return []; }
 }
 function set(key, data) {
   localStorage.setItem(key, JSON.stringify(data));
 }
+function isValidFormat(word) {
+  return /^[a-zA-Z]{2,20}$/.test(word);
+}
 
-let currentType = '';
-let currentView = 'cards';   // 'cards' 或 'list'
+// 获取 Excel 词库（all_words_json）
+function getWordBank() {
+  const data = JSON.parse(localStorage.getItem('all_words_json') || '[]');
+  // 返回单词集合以及映射
+  const set = new Set(data.map(w => w.单词));
+  const map = {};
+  data.forEach(w => { map[w.单词] = w.释义 || ''; });
+  return { set, map };
+}
 
+// 检查单词是否合法（在词库中）
+function isWordValid(word) {
+  const bank = getWordBank();
+  return bank.set.has(word.toLowerCase());
+}
+
+// 获取单词释义（优先词库）
+function getMeaning(word) {
+  const bank = getWordBank();
+  return bank.map[word.toLowerCase()] || '暂无释义';
+}
+
+// ===================== 页面导航 =====================
 function showCards() {
-
   document.querySelectorAll('.card').forEach(c => c.style.display = 'block');
   document.getElementById('listBox').style.display = 'none';
   document.getElementById('startBtn').style.display = 'none';
-  document.getElementById('roundSelectorBox').style.display = 'none';
   document.getElementById('manualAddBox').style.display = 'none';
   document.getElementById('uploadBtn').style.display = 'none';
   document.getElementById('cameraBtn').style.display = 'none';
-  
   currentView = 'cards';
-  // 退出按钮行为：返回index主页
-  document.getElementById('backBtn').onclick = () => {
-    window.location.href = '/';
-  };
+  document.getElementById('backBtn').onclick = () => { window.location.href = '/'; };
 }
 
-// 显示某一类型的单词列表
 function showList(type) {
   currentType = type;
-  let list = get('wordpop_' + type);
-
-  // 隐藏卡片
   document.querySelectorAll('.card').forEach(c => c.style.display = 'none');
-  // 显示列表、开始按钮、轮默选择
   document.getElementById('listBox').style.display = 'block';
   document.getElementById('startBtn').style.display = 'block';
-  document.getElementById('roundSelectorBox').style.display = 'flex';
-  
-  // 自习室独有的：手动添加、上传/拍照按钮
   document.getElementById('manualAddBox').style.display = (type === 'selfstudy') ? 'flex' : 'none';
   document.getElementById('uploadBtn').style.display = (type === 'selfstudy') ? 'flex' : 'none';
   document.getElementById('cameraBtn').style.display = (type === 'selfstudy') ? 'flex' : 'none';
 
-  document.getElementById('listBox').innerHTML = list.map(w => `
-    <div class="word-item">
-      <span>${w}</span>
-      ${type === 'starred' ? `<div class="star" onclick="unstar(this,'${w}')">★</div>` : ''}
-    </div>
-  `).join('');
-
+  renderWordList(type);
   currentView = 'list';
-
-  document.getElementById('backBtn').onclick = () => {
-    showCards();
-  };
+  document.getElementById('backBtn').onclick = () => { showCards(); };
 }
 
 function goBack() {
-  if (currentView === 'list') {
-    showCards();
-  } else {
-    window.location.href = '/';
-  }
+  if (currentView === 'list') showCards();
+  else window.location.href = '/';
+}
+
+function renderWordList(type) {
+  const list = get('wordpop_' + type);
+  const container = document.getElementById('listBox');
+  // 保留上传/拍照按钮
+  const btnHTML = `
+    <button class="list-btn" id="uploadBtn" style="top: -12px; right: -12px; display:${type==='selfstudy'?'flex':'none'};">＋</button>
+    <button class="list-btn" id="cameraBtn" style="top: -12px; right: 36px; display:${type==='selfstudy'?'flex':'none'};">📸</button>
+  `;
+  container.innerHTML = btnHTML + list.map(w => `
+    <div class="word-item">
+      <span>${w}</span>
+      <div style="display:flex; align-items:center; gap:5px;">
+        ${type === 'starred' ? `<div class="star" onclick="unstar(this,'${w}')">★</div>` : ''}
+        ${type === 'selfstudy' ? `<button class="del-btn" onclick="deleteWord('${w}')">✕</button>` : ''}
+      </div>
+    </div>
+  `).join('');
+
+  // 重新绑定按钮事件（因为 innerHTML 覆盖了）
+  document.getElementById('uploadBtn').onclick = () => { document.getElementById('fileInput').click(); };
+  document.getElementById('cameraBtn').onclick = openCamera;
+}
+
+function deleteWord(word) {
+  let arr = get('wordpop_selfstudy');
+  set('wordpop_selfstudy', arr.filter(w => w !== word));
+  renderWordList('selfstudy');
 }
 
 function unstar(el, word) {
@@ -301,97 +354,157 @@ function unstar(el, word) {
   }, 200);
 }
 
-function extractEnglish(text) {
-  return (text.match(/[a-zA-Z]{2,}/g) || []).map(w => w.toLowerCase());
+// ===================== 手动添加单词 =====================
+document.getElementById('manualAddBtn').onclick = function() {
+  const input = document.getElementById('manualAddInput');
+  const word = input.value.trim();
+  if (!isValidFormat(word)) {
+    alert('请输入有效的英文单词（2~20个字母）');
+    return;
+  }
+  const lower = word.toLowerCase();
+  const old = get('wordpop_selfstudy');
+  if (old.includes(lower)) {
+    alert('单词已存在');
+    return;
+  }
+
+  // 拼写校验
+  if (!isWordValid(lower)) {
+    const confirmed = confirm('该词不在词库中，可能拼写错误，确定添加吗？');
+    if (!confirmed) return;
+  }
+
+  old.push(lower);
+  set('wordpop_selfstudy', old);
+  // 尝试补全释义（如果词库存在则带释义，否则“暂无释义”）
+  // 释义由默写练习页负责获取，这里不做额外处理
+  renderWordList('selfstudy');
+  input.value = '';
+};
+
+// ===================== 图像预处理 =====================
+function preprocessImage(imageElement) {
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  canvas.width = imageElement.width;
+  canvas.height = imageElement.height;
+  ctx.drawImage(imageElement, 0, 0);
+  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const data = imageData.data;
+
+  let histogram = new Array(256).fill(0);
+  let grayValues = new Uint8Array(canvas.width * canvas.height);
+  let idx = 0;
+  for (let i = 0; i < data.length; i += 4) {
+    const gray = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+    grayValues[idx] = gray;
+    histogram[gray]++;
+    idx++;
+    data[i] = data[i + 1] = data[i + 2] = gray;
+  }
+
+  let total = canvas.width * canvas.height;
+  let sum = 0;
+  for (let i = 0; i < 256; i++) sum += i * histogram[i];
+  let sumB = 0, wB = 0, wF = 0, maxVariance = 0, threshold = 128;
+  for (let i = 0; i < 256; i++) {
+    wB += histogram[i];
+    if (wB === 0) continue;
+    wF = total - wB;
+    if (wF === 0) break;
+    sumB += i * histogram[i];
+    const mB = sumB / wB;
+    const mF = (sum - sumB) / wF;
+    const variance = wB * wF * (mB - mF) * (mB - mF);
+    if (variance > maxVariance) {
+      maxVariance = variance;
+      threshold = i;
+    }
+  }
+
+  for (let i = 0; i < data.length; i += 4) {
+    const val = data[i] > threshold ? 255 : 0;
+    data[i] = data[i + 1] = data[i + 2] = 255 - val;
+  }
+  ctx.putImageData(imageData, 0, 0);
+  return canvas.toDataURL('image/png');
 }
 
-function isValidWord(word) {
-  return /^[a-zA-Z]{2,20}$/.test(word);
-}
-
-// 图片压缩
-function compressImage(fileOrBlob, maxSize) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        let width = img.width;
-        let height = img.height;
-        if (width > maxSize || height > maxSize) {
-          if (width > height) { height *= maxSize / width; width = maxSize; }
-          else { width *= maxSize / height; height = maxSize; }
-        }
-        canvas.width = width; canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, width, height);
-        canvas.toBlob(resolve, 'image/jpeg', 0.8);
-      };
-      img.onerror = reject;
-      img.src = e.target.result;
-    };
-    reader.onerror = reject;
-    reader.readAsDataURL(fileOrBlob);
-  });
-}
-
+// ===================== Tesseract 识别 =====================
 async function processImage(fileOrBlob) {
   const loading = document.createElement('div');
   loading.innerText = '正在识别单词...';
-  loading.style.cssText = `
-    position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
-    background:#000;color:#fff;padding:12px 24px;border-radius:8px;z-index:999;
-  `;
+  loading.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#000;color:#fff;padding:12px 24px;border-radius:8px;z-index:999;';
   document.body.appendChild(loading);
+
   try {
-    const compressedBlob = await compressImage(fileOrBlob, 1200);
+    const img = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const image = new Image();
+        image.onload = () => resolve(image);
+        image.onerror = reject;
+        image.src = e.target.result;
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(fileOrBlob);
+    });
+
+    const processedDataUrl = preprocessImage(img);
+
     const worker = await Tesseract.createWorker('eng', 1, {
       logger: m => {
-        if (m.status === 'recognizing text') loading.innerText = `识别中 ${Math.round(m.progress * 100)}%`;
+        if (m.status === 'recognizing text') {
+          loading.innerText = `识别中 ${Math.round(m.progress * 100)}%`;
+        }
       }
     });
-    const { data: { text } } = await worker.recognize(compressedBlob, {
-      tessedit_pageseg_mode: '6',
-      tessedit_char_whitelist: 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ',
+
+    const { data: { text } } = await worker.recognize(processedDataUrl, {
+      tessedit_pageseg_mode: '6'
     });
     await worker.terminate();
 
-    const rawWords = extractEnglish(text);
-    const validWords = [];
-    for (const w of rawWords) {
-      if (isValidWord(w)) {
-        validWords.push(w);
-      }
+    const rawWords = text.match(/[a-zA-Z]{2,}/g) || [];
+    const candidateWords = rawWords.map(w => w.toLowerCase()).filter(isValidFormat);
+
+    // 只保留词库中的单词
+    const bank = getWordBank();
+    const validWords = candidateWords.filter(w => bank.set.has(w));
+
+    if (validWords.length === 0) {
+      alert('未识别到有效单词（词库外的单词已过滤），可手动添加。');
+      return;
     }
 
     const old = get('wordpop_selfstudy');
     const combined = [...new Set([...old, ...validWords])];
     set('wordpop_selfstudy', combined);
 
+    // 如果词库缺少这些单词的释义？但既然都在词库中，释义已存在 all_words_json 里，无需补全
+
     showList('selfstudy');
   } catch (err) {
     console.error(err);
-    alert('识别失败，请换一张更清晰的图片或重试');
+    alert('识别失败，请重试');
   } finally {
     document.body.removeChild(loading);
   }
 }
 
-document.getElementById('fileInput').onchange = function (e) {
+// 文件上传
+document.getElementById('fileInput').onchange = function(e) {
   const file = e.target.files[0];
   if (!file) return;
   this.value = '';
   processImage(file);
 };
 
-// 拍照功能
-const cameraBtn = document.getElementById('cameraBtn');
+// ===================== 拍照功能 =====================
 const cameraModal = document.getElementById('cameraModal');
 const cameraVideo = document.getElementById('cameraVideo');
 const cameraCanvas = document.getElementById('cameraCanvas');
-const captureBtn = document.getElementById('captureBtn');
-const closeCameraBtn = document.getElementById('closeCameraBtn');
 let mediaStream = null;
 
 async function openCamera() {
@@ -403,10 +516,10 @@ async function openCamera() {
     cameraVideo.srcObject = mediaStream;
     cameraModal.style.display = 'flex';
   } catch (err) {
-    alert('无法打开摄像头，请检查权限或使用上传图片功能。');
-    console.error(err);
+    alert('无法打开摄像头，请使用上传图片功能');
   }
 }
+
 function closeCamera() {
   if (mediaStream) {
     mediaStream.getTracks().forEach(t => t.stop());
@@ -415,45 +528,43 @@ function closeCamera() {
   cameraVideo.srcObject = null;
   cameraModal.style.display = 'none';
 }
-cameraBtn.onclick = openCamera;
-closeCameraBtn.onclick = closeCamera;
-captureBtn.onclick = () => {
+
+document.getElementById('closeCameraBtn').onclick = closeCamera;
+document.getElementById('captureBtn').onclick = () => {
   const ctx = cameraCanvas.getContext('2d');
   cameraCanvas.width = cameraVideo.videoWidth;
   cameraCanvas.height = cameraVideo.videoHeight;
-  ctx.drawImage(cameraVideo, 0, 0, cameraCanvas.width, cameraCanvas.height);
+  ctx.drawImage(cameraVideo, 0, 0);
   cameraCanvas.toBlob(blob => {
     closeCamera();
     processImage(blob);
-  }, 'image/jpeg', 0.8);
+  }, 'image/jpeg', 0.9);
 };
 
-// 手动添加单词
-document.getElementById('manualAddBtn').onclick = function() {
-  const input = document.getElementById('manualAddInput');
-  const word = input.value.trim();
-  if (!isValidWord(word)) {
-    alert('请输入默写单词');
+// ===================== 默写模态框 =====================
+const practiceModal = document.getElementById('practiceModal');
+document.getElementById('startBtn').onclick = () => {
+  if (get('wordpop_' + currentType).length === 0) {
+    alert('单词列表为空，请先添加单词');
     return;
   }
-  const old = get('wordpop_selfstudy');
-  if (old.includes(word.toLowerCase())) {
-    alert('单词已存在');
-    return;
-  }
-  old.push(word.toLowerCase());
-  set('wordpop_selfstudy', old);
-  showList('selfstudy');
-  input.value = '';
+  practiceModal.classList.add('show');
 };
 
-document.getElementById('startBtn').onclick = function () {
-  const rounds = parseInt(document.getElementById('roundsSelect').value, 10);
+document.getElementById('cancelPracticeBtn').onclick = () => {
+  practiceModal.classList.remove('show');
+};
+
+document.getElementById('confirmPracticeBtn').onclick = () => {
+  const rounds = parseInt(document.getElementById('modalRoundsSelect').value, 10);
+  const order = document.getElementById('modalOrderSelect').value;
   localStorage.setItem('practice_required_correct', rounds);
+  localStorage.setItem('practice_order', order);
   localStorage.setItem('current_practice', currentType);
   window.location.href = '/writing/practice';
 };
 
+// ===================== 初始化 =====================
 showCards();
 </script>
 </body>
