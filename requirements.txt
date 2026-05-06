@@ -1,5 +1,8 @@
 flask
 pandas
 openpyxl
-cryptography
 xlrd
+pytesseract
+opencv-python-headless
+numpy
+Pillow
