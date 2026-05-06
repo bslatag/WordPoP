@@ -1,8 +1,25 @@
 <!DOCTYPE html>
-<html>
-<head><title>单词学习</title></head>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WordPoP</title>
+<link href="https://fonts.loli.net/css2?family=ZCOOL+KuaiLe&display=swap" rel="stylesheet">
+<style>
+:root { --bg-color: #B9C7F8; --card-color: #D1D067; --text-color: #0D21A5; --accent-pink: #FF6B9D; --accent-cyan: #00D2BE; --border-color: #2D3436; }
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family: 'ZCOOL KuaiLe', cursive; background: var(--bg-color); height: 100vh; display: flex; justify-content: center; align-items: center; text-align: center; }
+.menu a { display: block; margin: 15px; font-size: 28px; color: var(--text-color); text-decoration: none; background: var(--card-color); padding: 15px 30px; border-radius: 20px; border: 3px solid var(--border-color); box-shadow: 5px 5px 0 var(--border-color); }
+</style>
+</head>
 <body>
-  <h1><a href="/study">进入学习页</a></h1>
-  <h1><a href="/writing">进入默写本</a></h1>
+<div>
+  <h1 style="font-size:48px; color:var(--text-color); text-shadow:3px 3px 0 white; margin-bottom:30px;">WordPoP</h1>
+  <div class="menu">
+    <a href="/study">开始学习</a>
+    <a href="/writing">默写本</a>
+    <a href="/login">登录</a>
+  </div>
+</div>
 </body>
 </html>
