@@ -406,24 +406,33 @@ document.getElementById('uploadBtn').onclick = function() {
 
 // 图片选择后自动上传 OCR
 document.getElementById('fileInput').onchange = async function(e) {
-  const file = e.target.files[0];
-  if (!file) return;
-  this.value = '';
-  showLoading('识别中...');
-  try {
-    const formData = new FormData();
-    formData.append('image', file);
-    const res = await fetch('/api/ocr', { method: 'POST', body: formData });
-    const data = await res.json();
-    if (data.words && data.words.length > 0) {
-      // 逐个添加到自习室（自动去重）
-      for (const w of data.words) {
-        await apiFetch('/api/add-to-list', {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({word: w})
-        });
-      }
+    const file = e.target.files[0];
+    if (!file) return;
+    this.value = '';
+    showLoading('识别中...');
+    try {
+        const formData = new FormData();
+        formData.append('image', file);
+        const res = await fetch('/api/ocr', { method: 'POST', body: formData });
+        const data = await res.json();
+        if (data.words && data.words.length > 0) {
+            for (const w of data.words) {
+                await apiFetch('/api/add-to-list', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({word: w})
+                });
+            }
+            refreshList('selfstudy');
+        } else {
+            alert('未识别到有效单词（词库外的单词已过滤），可手动添加。');
+        }
+    } catch (err) {
+        alert('识别请求失败，请检查网络');
+    } finally {
+        hideLoading();
+    }
+};
       refreshList('selfstudy');
     } else {
       alert('未识别到有效单词（词库外的单词已过滤），可手动添加。');
