@@ -9,7 +9,6 @@ app.secret_key = os.environ.get('SECRET_KEY', 'wordpop-secret-key')
 
 DATABASE = 'wordpop.db'
 
-# ------------------ 数据库工具 ------------------
 def get_db():
     if '_database' not in g:
         g._database = sqlite3.connect(DATABASE)
