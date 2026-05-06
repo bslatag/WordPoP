@@ -19,9 +19,6 @@ DATABASE = 'wordpop.db'
 
 # ------------------ 数据库核心工具 ------------------
 def get_db():
-    """
-    使用线程安全的 Flask g 对象，确保每个请求/线程获得独立的数据库连接。
-    """
     if '_database' not in g:
         g._database = sqlite3.connect(DATABASE)
         g._database.row_factory = sqlite3.Row
@@ -29,77 +26,57 @@ def get_db():
 
 @app.teardown_appcontext
 def close_connection(exception):
-    """
-    在每次请求结束后，安全地关闭并清理当前线程的数据库连接。
-    """
     db = g.pop('_database', None)
     if db is not None:
         db.close()
 
-def init_db():
-    """
-    初始化数据库并创建所有必要的表。
-    """
-    db = get_db()
-    # 直接执行建表语句，这样更健壮
-    db.executescript("""
-        CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT UNIQUE,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        );
+# 数据库只初始化一次
+db_initialized = False
 
-        CREATE TABLE IF NOT EXISTS learned_words (
-            user_id INTEGER,
-            word TEXT NOT NULL,
-            PRIMARY KEY (user_id, word),
-            FOREIGN KEY (user_id) REFERENCES users(id)
-        );
-
-        CREATE TABLE IF NOT EXISTS starred_words (
-            user_id INTEGER,
-            word TEXT NOT NULL,
-            PRIMARY KEY (user_id, word),
-            FOREIGN KEY (user_id) REFERENCES users(id)
-        );
-
-        CREATE TABLE IF NOT EXISTS selfstudy_words (
-            user_id INTEGER,
-            word TEXT NOT NULL,
-            PRIMARY KEY (user_id, word),
-            FOREIGN KEY (user_id) REFERENCES users(id)
-        );
-    """)
-    db.commit()
-    print("应用首次启动：数据库已初始化。")
-    
-# ------------------ 请求拦截器 ------------------
 @app.before_request
-def before_first_request():
-    """
-    在处理第一个请求时，自动完成数据库初始化。
-    这解决了启动时数据库连接与后续请求线程冲突的问题。
-    """
-    init_db()
-    # 完成初始化后，将当前函数点替换为一个空操作，避免重复执行
-    app.before_request_funcs[None].remove(before_first_request)
+def init_db_on_first_request():
+    global db_initialized
+    if not db_initialized:
+        db = get_db()
+        db.executescript("""
+            CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT UNIQUE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+            CREATE TABLE IF NOT EXISTS learned_words (
+                user_id INTEGER,
+                word TEXT NOT NULL,
+                PRIMARY KEY (user_id, word),
+                FOREIGN KEY (user_id) REFERENCES users(id)
+            );
+            CREATE TABLE IF NOT EXISTS starred_words (
+                user_id INTEGER,
+                word TEXT NOT NULL,
+                PRIMARY KEY (user_id, word),
+                FOREIGN KEY (user_id) REFERENCES users(id)
+            );
+            CREATE TABLE IF NOT EXISTS selfstudy_words (
+                user_id INTEGER,
+                word TEXT NOT NULL,
+                PRIMARY KEY (user_id, word),
+                FOREIGN KEY (user_id) REFERENCES users(id)
+            );
+        """)
+        db.commit()
+        db_initialized = True
 
 # ------------------ 用户系统 ------------------
-# ... (此后的所有路由代码保持不变)
-
-# 获取当前用户id，游客自动创建临时用户
 def get_current_user():
     user_id = session.get('user_id')
     if user_id:
         return user_id
-    # 创建游客
     db = get_db()
     cursor = db.execute("INSERT INTO users (username) VALUES (NULL)")
     db.commit()
     session['user_id'] = cursor.lastrowid
     return session['user_id']
 
-# 正式登录绑定用户名
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -107,24 +84,19 @@ def login():
         if not username:
             return render_template('login.html', error='用户名不能为空')
         db = get_db()
-        # 查找现有用户
         existing = db.execute("SELECT id FROM users WHERE username = ?", (username,)).fetchone()
         if existing:
-            # 合并数据：将游客数据转移到正式用户
             guest_id = session.get('user_id')
             if guest_id and guest_id != existing['id']:
-                # 合并已学、收藏、自习室
                 for table in ['learned_words', 'starred_words', 'selfstudy_words']:
                     rows = db.execute(f"SELECT word FROM {table} WHERE user_id = ?", (guest_id,)).fetchall()
                     for row in rows:
                         db.execute(f"INSERT OR IGNORE INTO {table} (user_id, word) VALUES (?, ?)",
                                    (existing['id'], row['word']))
-                # 删除游客记录
                 db.execute("DELETE FROM users WHERE id = ?", (guest_id,))
                 db.commit()
             session['user_id'] = existing['id']
         else:
-            # 升级游客或新建正式用户
             guest_id = session.get('user_id')
             if guest_id:
                 db.execute("UPDATE users SET username = ? WHERE id = ?", (username, guest_id))
@@ -159,7 +131,6 @@ def writing_practice():
     return render_template('writing_practice.html')
 
 # ------------------ API 路由 ------------------
-# 获取当前用户信息
 @app.route('/api/user')
 def api_user():
     user_id = get_current_user()
@@ -171,13 +142,12 @@ def api_user():
         'is_guest': user['username'] is None
     })
 
-# 获取学习单词（随机30个未学）
 @app.route('/api/study-words')
 def api_study_words():
     user_id = get_current_user()
     db = get_db()
-    learned = set(row['word'] for row in db.execute("SELECT word FROM learned_words WHERE user_id = ?", (user_id,)).fetchall())
-    # 读取 Excel
+    learned = set(row['word'] for row in db.execute(
+        "SELECT word FROM learned_words WHERE user_id = ?", (user_id,)).fetchall())
     df = pd.read_excel("word.xls")
     all_words = df.to_dict('records')
     candidates = [w for w in all_words if w['单词'] not in learned]
@@ -185,7 +155,6 @@ def api_study_words():
     selected = candidates[:30]
     return jsonify(selected)
 
-# 标记已学
 @app.route('/api/mark-learned', methods=['POST'])
 def api_mark_learned():
     user_id = get_current_user()
@@ -196,7 +165,6 @@ def api_mark_learned():
     db.commit()
     return jsonify({'status': 'ok'})
 
-# 获取单词列表
 @app.route('/api/word-list/<list_type>')
 def api_word_list(list_type):
     user_id = get_current_user()
@@ -212,14 +180,12 @@ def api_word_list(list_type):
     rows = db.execute(f"SELECT word FROM {table} WHERE user_id = ?", (user_id,)).fetchall()
     return jsonify([row['word'] for row in rows])
 
-# 添加单词到自习室
 @app.route('/api/add-to-list', methods=['POST'])
 def api_add_to_list():
     user_id = get_current_user()
     word = request.json.get('word', '').strip().lower()
     if not re.match(r'^[a-zA-Z]{2,20}$', word):
         return jsonify({'error': '无效单词格式'}), 400
-    # 校验是否在 Excel 词库中
     df = pd.read_excel("word.xls")
     valid_words = set(df['单词'].str.lower())
     in_dict = word in valid_words
@@ -228,7 +194,6 @@ def api_add_to_list():
     db.commit()
     return jsonify({'status': 'ok', 'in_dict': in_dict})
 
-# 删除单词
 @app.route('/api/remove-from-list', methods=['POST'])
 def api_remove_from_list():
     user_id = get_current_user()
@@ -238,7 +203,6 @@ def api_remove_from_list():
     db.commit()
     return jsonify({'status': 'ok'})
 
-# 收藏/取消收藏
 @app.route('/api/toggle-star', methods=['POST'])
 def api_toggle_star():
     user_id = get_current_user()
@@ -254,7 +218,6 @@ def api_toggle_star():
     db.commit()
     return jsonify({'status': 'ok', 'action': action})
 
-# 检查单词
 @app.route('/api/check-word')
 def api_check_word():
     word = request.args.get('word', '').strip().lower()
@@ -265,7 +228,7 @@ def api_check_word():
         return jsonify({'valid': True, 'meaning': meaning})
     return jsonify({'valid': False, 'meaning': ''})
 
-# OCR 识别
+# OCR 识别（优化后只保留这一个）
 @app.route('/api/ocr', methods=['POST'])
 def api_ocr():
     if 'image' not in request.files:
@@ -276,18 +239,23 @@ def api_ocr():
     img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
     if img is None:
         return jsonify({'words': [], 'error': '图片无法解析'}), 400
-    # 预处理
+
+    # 速度优化
+    h, w = img.shape[:2]
+    max_size = 1000
+    if w > max_size:
+        scale = max_size / w
+        new_w = max_size
+        new_h = int(h * scale)
+        img = cv2.resize(img, (new_w, new_h), interpolation=cv2.INTER_AREA)
+
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    thresh = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-                                   cv2.THRESH_BINARY, 11, 2)
-    denoised = cv2.fastNlMeansDenoising(thresh, h=10)
-    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (2, 2))
-    closed = cv2.morphologyEx(denoised, cv2.MORPH_CLOSE, kernel)
-    pil_img = Image.fromarray(closed)
-    custom_config = r'--psm 6 -c tessedit_char_whitelist=abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
+    _, thresh = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+    pil_img = Image.fromarray(thresh)
+    custom_config = r'--psm 13 -c tessedit_char_whitelist=abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
     text = pytesseract.image_to_string(pil_img, lang='eng', config=custom_config)
+
     candidates = re.findall(r'[a-zA-Z]{2,}', text)
-    # 词库过滤
     df = pd.read_excel("word.xls")
     valid_words = set(df['单词'].str.lower())
     result = [w.lower() for w in candidates if w.lower() in valid_words]
