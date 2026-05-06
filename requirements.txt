@@ -2,3 +2,4 @@ flask
 pandas
 openpyxl
 cryptography
+xlrd
