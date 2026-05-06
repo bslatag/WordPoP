@@ -1,12 +1,9 @@
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for, g
-import sqlite3
-import random
-import os
-import re
+import sqlite3, random, os, re, io, pytesseract
+from PIL import Image, ImageFilter
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'wordpop-secret-key')
-
 DATABASE = 'wordpop.db'
 
 def get_db():
@@ -21,75 +18,7 @@ def close_connection(exception):
     if db is not None:
         db.close()
 
-_db_initialized = False
-
-@app.before_request
-def init_db_on_first_request():
-    global _db_initialized
-    if not _db_initialized:
-        db = get_db()
-        # 用户及学习记录表
-        db.executescript("""
-            CREATE TABLE IF NOT EXISTS users (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                username TEXT UNIQUE,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
-            CREATE TABLE IF NOT EXISTS learned_words (
-                user_id INTEGER,
-                word TEXT NOT NULL,
-                PRIMARY KEY (user_id, word),
-                FOREIGN KEY (user_id) REFERENCES users(id)
-            );
-            CREATE TABLE IF NOT EXISTS starred_words (
-                user_id INTEGER,
-                word TEXT NOT NULL,
-                PRIMARY KEY (user_id, word),
-                FOREIGN KEY (user_id) REFERENCES users(id)
-            );
-            CREATE TABLE IF NOT EXISTS selfstudy_words (
-                user_id INTEGER,
-                word TEXT NOT NULL,
-                PRIMARY KEY (user_id, word),
-                FOREIGN KEY (user_id) REFERENCES users(id)
-            );
-            -- 单词词库表
-            CREATE TABLE IF NOT EXISTS dictionary (
-                word TEXT PRIMARY KEY,
-                meaning TEXT,
-                phonetic TEXT
-            );
-        """)
-        db.commit()
-
-        # 检查并导入 Excel 数据到 dictionary 表
-        cursor = db.execute("SELECT COUNT(*) FROM dictionary")
-        if cursor.fetchone()[0] == 0:
-            try:
-                import pandas as pd
-                df = pd.read_excel("word.xls")
-            except Exception as e:
-                print("⚠️  Excel 读取失败，将无法提供释义校验：", e)
-                df = None
-            if df is not None:
-                for _, row in df.iterrows():
-                    word = str(row.get('单词', '')).strip().lower()
-                    meaning = str(row.get('释义', ''))
-                    phonetic = str(row.get('音标', ''))
-                    if word:
-                        db.execute("INSERT OR IGNORE INTO dictionary (word, meaning, phonetic) VALUES (?, ?, ?)",
-                                   (word, meaning, phonetic))
-                db.commit()
-                print(f"✅ 已从 Excel 导入 {len(df)} 个单词到数据库")
-
-            # 释放 pandas 占用的内存（可选）
-            import sys
-            if 'pandas' in sys.modules:
-                del sys.modules['pandas']
-
-        _db_initialized = True
-
-# ------------------ 用户系统 ------------------
+# ── 用户系统 ──
 def get_current_user():
     user_id = session.get('user_id')
     if user_id:
@@ -114,7 +43,7 @@ def login():
                 for table in ['learned_words', 'starred_words', 'selfstudy_words']:
                     rows = db.execute(f"SELECT word FROM {table} WHERE user_id = ?", (guest_id,)).fetchall()
                     for row in rows:
-                        db.execute(f"INSERT OR IGNORE INTO {table} (user_id, word) VALUES (?, ?)",
+                        db.execute(f"INSERT OR IGNORE INTO {table} (user_id, word) VALUES (?,?)",
                                    (existing['id'], row['word']))
                 db.execute("DELETE FROM users WHERE id = ?", (guest_id,))
                 db.commit()
@@ -136,7 +65,7 @@ def logout():
     session.clear()
     return redirect(url_for('index'))
 
-# ------------------ 页面路由 ------------------
+# ── 页面 ──
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -153,28 +82,28 @@ def writing():
 def writing_practice():
     return render_template('writing_practice.html')
 
-# ------------------ API 路由 ------------------
+# ── API ──
 @app.route('/api/user')
 def api_user():
     user_id = get_current_user()
     db = get_db()
     user = db.execute("SELECT id, username FROM users WHERE id = ?", (user_id,)).fetchone()
-    return jsonify({
-        'id': user['id'],
-        'username': user['username'],
-        'is_guest': user['username'] is None
-    })
+    return jsonify({'id': user['id'], 'username': user['username'], 'is_guest': user['username'] is None})
 
 @app.route('/api/study-words')
 def api_study_words():
     user_id = get_current_user()
     db = get_db()
-    learned = set(row['word'] for row in db.execute(
-        "SELECT word FROM learned_words WHERE user_id = ?", (user_id,)).fetchall())
-    # 从 dictionary 表随机取 30 个未学单词
-    all_words = db.execute("SELECT word, meaning, phonetic FROM dictionary ORDER BY RANDOM() LIMIT 100").fetchall()
+    learned = set(row['word'] for row in db.execute("SELECT word FROM learned_words WHERE user_id = ?", (user_id,)).fetchall())
+    all_words = db.execute("SELECT word, meaning, phonetic FROM dictionary ORDER BY RANDOM() LIMIT 200").fetchall()
     candidates = [{'单词': row['word'], '释义': row['meaning'], '音标': row['phonetic']}
                   for row in all_words if row['word'] not in learned]
+    if len(candidates) < 30:
+        # 如果不足30个，用已学单词补足（避免空数组）
+        all_available = db.execute("SELECT word, meaning, phonetic FROM dictionary ORDER BY RANDOM() LIMIT 50").fetchall()
+        more = [{'单词': row['word'], '释义': row['meaning'], '音标': row['phonetic']}
+                for row in all_available if row['word'] not in [c['单词'] for c in candidates]]
+        candidates.extend(more[:30-len(candidates)])
     random.shuffle(candidates)
     selected = candidates[:30]
     return jsonify(selected)
@@ -185,7 +114,7 @@ def api_mark_learned():
     words = request.json.get('words', [])
     db = get_db()
     for word in words:
-        db.execute("INSERT OR IGNORE INTO learned_words (user_id, word) VALUES (?, ?)", (user_id, word))
+        db.execute("INSERT OR IGNORE INTO learned_words (user_id, word) VALUES (?,?)", (user_id, word))
     db.commit()
     return jsonify({'status': 'ok'})
 
@@ -193,11 +122,7 @@ def api_mark_learned():
 def api_word_list(list_type):
     user_id = get_current_user()
     db = get_db()
-    table_map = {
-        'learned': 'learned_words',
-        'starred': 'starred_words',
-        'selfstudy': 'selfstudy_words'
-    }
+    table_map = {'learned': 'learned_words', 'starred': 'starred_words', 'selfstudy': 'selfstudy_words'}
     table = table_map.get(list_type)
     if not table:
         return jsonify([])
@@ -210,10 +135,9 @@ def api_add_to_list():
     word = request.json.get('word', '').strip().lower()
     if not re.match(r'^[a-zA-Z]{2,20}$', word):
         return jsonify({'error': '无效单词格式'}), 400
-    # 检查是否在词库中
     db = get_db()
     in_dict = db.execute("SELECT 1 FROM dictionary WHERE word = ?", (word,)).fetchone() is not None
-    db.execute("INSERT OR IGNORE INTO selfstudy_words (user_id, word) VALUES (?, ?)", (user_id, word))
+    db.execute("INSERT OR IGNORE INTO selfstudy_words (user_id, word) VALUES (?,?)", (user_id, word))
     db.commit()
     return jsonify({'status': 'ok', 'in_dict': in_dict})
 
@@ -236,7 +160,7 @@ def api_toggle_star():
         db.execute("DELETE FROM starred_words WHERE user_id = ? AND word = ?", (user_id, word))
         action = 'removed'
     else:
-        db.execute("INSERT OR IGNORE INTO starred_words (user_id, word) VALUES (?, ?)", (user_id, word))
+        db.execute("INSERT OR IGNORE INTO starred_words (user_id, word) VALUES (?,?)", (user_id, word))
         action = 'added'
     db.commit()
     return jsonify({'status': 'ok', 'action': action})
@@ -249,6 +173,38 @@ def api_check_word():
     if row:
         return jsonify({'valid': True, 'meaning': row['meaning']})
     return jsonify({'valid': False, 'meaning': ''})
+
+# ── OCR ──
+@app.route('/api/ocr', methods=['POST'])
+def api_ocr():
+    if 'image' not in request.files:
+        return jsonify({'words': [], 'error': 'no image'}), 400
+    file = request.files['image']
+    img_bytes = file.read()
+    try:
+        img = Image.open(io.BytesIO(img_bytes)).convert('L')
+    except Exception:
+        return jsonify({'words': [], 'error': '图片无法解析'}), 400
+    # 压缩
+    w, h = img.size
+    max_size = 1200
+    if w > max_size or h > max_size:
+        img.thumbnail((max_size, max_size), Image.LANCZOS)
+    # 预处理
+    img = img.filter(ImageFilter.SHARPEN)
+    img = img.point(lambda x: 0 if x < 140 else 255)
+    # OCR
+    try:
+        text = pytesseract.image_to_string(img, lang='eng', config='--psm 6')
+    except Exception as e:
+        return jsonify({'words': [], 'error': f'识别出错: {str(e)}'}), 500
+    candidates = re.findall(r'[a-zA-Z]{2,20}', text.lower())
+    db = get_db()
+    valid_words = set(row['word'] for row in db.execute("SELECT word FROM dictionary").fetchall())
+    filtered = [w for w in candidates if w in valid_words]
+    unique = list(dict.fromkeys(filtered))
+    return jsonify({'words': unique, 'raw_count': len(candidates), 'filtered_count': len(unique)})
+
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
