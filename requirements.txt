@@ -2,7 +2,7 @@ flask
 pandas
 openpyxl
 xlrd
-paddlepaddle==3.1.1
+paddlepaddle==2.6.1
 paddleocr
 numpy
 Pillow
