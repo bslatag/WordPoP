@@ -104,13 +104,11 @@ document.getElementById('starBtn').onclick = async function() {
 
 // 跳过按钮（修复剩余未变的问题）
 document.getElementById('skipBtn').onclick = () => {
-  if (currentGroup.length && index < currentGroup.length - 1) {
-    index++;
-    updateCount();
-    showWord();
-  }
+    if (currentGroup.length && index < currentGroup.length - 1) {
+        index++;
+        showWord();
+    }
 };
-
 // 卡片翻转
 document.getElementById('cardBox').addEventListener('click', () => {
   const cb = document.getElementById('cardBox');
