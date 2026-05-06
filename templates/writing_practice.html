@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>默写练习</title>
-<link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=ZCOOL+KuaiLe&display=swap" rel="stylesheet">
+<link href="https://fonts.loli.net/css2?family=Fredoka+One&family=ZCOOL+KuaiLe&display=swap" rel="stylesheet">
 <style>
 :root {
   --bg-color: #B9C7F8;
@@ -124,6 +124,12 @@ const wordMap = allWords.reduce((m, w) => {
 const source = localStorage.getItem('current_practice');
 const wordList = JSON.parse(localStorage.getItem(`wordpop_${source}`) || []);
 const requiredCorrect = parseInt(localStorage.getItem('practice_required_correct'), 10) || 3;
+const order = localStorage.getItem('practice_order') || 'random';
+
+let orderedList = wordList;
+if (order === 'sequential') {
+  orderedList = [...wordList].sort(); // 字母表顺序
+}
 
 const wordProgress = {};
 let current = null;
@@ -155,12 +161,17 @@ function flashInfo(text, color, duration = 1500) {
 }
 
 function getNextWord() {
-  const available = wordList.filter(w => {
+  const available = orderedList.filter(w => {
     const p = wordProgress[w] || { correct: 0 };
     return p.correct < requiredCorrect;
   });
   if (available.length === 0) return null;
-  return available[Math.floor(Math.random() * available.length)];
+
+  if (order === 'sequential') {
+    return available[0]; // 取第一个（保持字母顺序）
+  } else {
+    return available[Math.floor(Math.random() * available.length)];
+  }
 }
 
 function randWord() {
