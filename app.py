@@ -1,15 +1,11 @@
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for, g
-import pandas as pd
+import sqlite3
 import random
 import os
-import sqlite3
 import re
-import numpy as np
-import cv2
-import easyocr
 
 app = Flask(__name__)
-app.secret_key = os.environ.get('SECRET_KEY', 'a-very-secret-key-for-session')
+app.secret_key = os.environ.get('SECRET_KEY', 'wordpop-secret-key')
 
 DATABASE = 'wordpop.db'
 
@@ -33,6 +29,7 @@ def init_db_on_first_request():
     global _db_initialized
     if not _db_initialized:
         db = get_db()
+        # 用户及学习记录表
         db.executescript("""
             CREATE TABLE IF NOT EXISTS users (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -57,8 +54,40 @@ def init_db_on_first_request():
                 PRIMARY KEY (user_id, word),
                 FOREIGN KEY (user_id) REFERENCES users(id)
             );
+            -- 单词词库表
+            CREATE TABLE IF NOT EXISTS dictionary (
+                word TEXT PRIMARY KEY,
+                meaning TEXT,
+                phonetic TEXT
+            );
         """)
         db.commit()
+
+        # 检查并导入 Excel 数据到 dictionary 表
+        cursor = db.execute("SELECT COUNT(*) FROM dictionary")
+        if cursor.fetchone()[0] == 0:
+            try:
+                import pandas as pd
+                df = pd.read_excel("word.xls")
+            except Exception as e:
+                print("⚠️  Excel 读取失败，将无法提供释义校验：", e)
+                df = None
+            if df is not None:
+                for _, row in df.iterrows():
+                    word = str(row.get('单词', '')).strip().lower()
+                    meaning = str(row.get('释义', ''))
+                    phonetic = str(row.get('音标', ''))
+                    if word:
+                        db.execute("INSERT OR IGNORE INTO dictionary (word, meaning, phonetic) VALUES (?, ?, ?)",
+                                   (word, meaning, phonetic))
+                db.commit()
+                print(f"✅ 已从 Excel 导入 {len(df)} 个单词到数据库")
+
+            # 释放 pandas 占用的内存（可选）
+            import sys
+            if 'pandas' in sys.modules:
+                del sys.modules['pandas']
+
         _db_initialized = True
 
 # ------------------ 用户系统 ------------------
@@ -143,9 +172,10 @@ def api_study_words():
     db = get_db()
     learned = set(row['word'] for row in db.execute(
         "SELECT word FROM learned_words WHERE user_id = ?", (user_id,)).fetchall())
-    df = pd.read_excel("word.xls")
-    all_words = df.to_dict('records')
-    candidates = [w for w in all_words if w['单词'] not in learned]
+    # 从 dictionary 表随机取 30 个未学单词
+    all_words = db.execute("SELECT word, meaning, phonetic FROM dictionary ORDER BY RANDOM() LIMIT 100").fetchall()
+    candidates = [{'单词': row['word'], '释义': row['meaning'], '音标': row['phonetic']}
+                  for row in all_words if row['word'] not in learned]
     random.shuffle(candidates)
     selected = candidates[:30]
     return jsonify(selected)
@@ -181,10 +211,9 @@ def api_add_to_list():
     word = request.json.get('word', '').strip().lower()
     if not re.match(r'^[a-zA-Z]{2,20}$', word):
         return jsonify({'error': '无效单词格式'}), 400
-    df = pd.read_excel("word.xls")
-    valid_words = set(df['单词'].str.lower())
-    in_dict = word in valid_words
+    # 检查是否在词库中
     db = get_db()
+    in_dict = db.execute("SELECT 1 FROM dictionary WHERE word = ?", (word,)).fetchone() is not None
     db.execute("INSERT OR IGNORE INTO selfstudy_words (user_id, word) VALUES (?, ?)", (user_id, word))
     db.commit()
     return jsonify({'status': 'ok', 'in_dict': in_dict})
@@ -216,51 +245,11 @@ def api_toggle_star():
 @app.route('/api/check-word')
 def api_check_word():
     word = request.args.get('word', '').strip().lower()
-    df = pd.read_excel("word.xls")
-    word_df = df[df['单词'].str.lower() == word]
-    if not word_df.empty:
-        meaning = word_df.iloc[0]['释义']
-        return jsonify({'valid': True, 'meaning': meaning})
+    db = get_db()
+    row = db.execute("SELECT meaning FROM dictionary WHERE word = ?", (word,)).fetchone()
+    if row:
+        return jsonify({'valid': True, 'meaning': row['meaning']})
     return jsonify({'valid': False, 'meaning': ''})
-
-# ------------------ EasyOCR ------------------
-_reader = None
-
-def get_reader():
-    global _reader
-    if _reader is None:
-        _reader = easyocr.Reader(['en'], gpu=False)
-    return _reader
-
-@app.route('/api/ocr', methods=['POST'])
-def api_ocr():
-    if 'image' not in request.files:
-        return jsonify({'words': [], 'error': '没有图片'}), 400
-    file = request.files['image']
-    img_bytes = file.read()
-    nparr = np.frombuffer(img_bytes, np.uint8)
-    img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-    if img is None:
-        return jsonify({'words': [], 'error': '图片无法解析'}), 400
-
-    reader = get_reader()
-    result = reader.readtext(img, detail=0)
-
-    candidates = []
-    for text in result:
-        words = re.findall(r'[a-zA-Z]{2,20}', text)
-        candidates.extend([w.lower() for w in words])
-
-    df = pd.read_excel("word.xls")
-    valid_words = set(df['单词'].str.lower())
-    filtered = [w for w in candidates if w in valid_words]
-    unique = list(dict.fromkeys(filtered))
-
-    return jsonify({
-        'words': unique,
-        'raw_count': len(candidates),
-        'filtered_count': len(unique)
-    })
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
