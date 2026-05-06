@@ -2,7 +2,8 @@ flask
 pandas
 openpyxl
 xlrd
-pytesseract
-opencv-python-headless
+paddlepaddle==3.1.1
+paddleocr
 numpy
 Pillow
+opencv-python-headless
