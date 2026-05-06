@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>登录 WordPoP</title>
+<link href="https://fonts.loli.net/css2?family=ZCOOL+KuaiLe&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg-color: #B9C7F8;
+  --card-color: #D1D067;
+  --text-color: #0D21A5;
+  --accent-pink: #FF6B9D;
+  --accent-cyan: #00D2BE;
+  --border-color: #2D3436;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family: 'ZCOOL KuaiLe', cursive;
+  background: var(--bg-color);
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.login-box {
+  background: var(--card-color);
+  border: 4px solid var(--border-color);
+  border-radius: 30px;
+  box-shadow: 10px 10px 0 var(--border-color);
+  padding: 40px;
+  text-align: center;
+  width: 90%;
+  max-width: 400px;
+}
+.login-box h1 { color: var(--text-color); font-size: 36px; margin-bottom: 20px; }
+.login-box input {
+  width: 100%; padding: 12px; font-size: 22px;
+  border-radius: 12px; border: 3px solid var(--border-color);
+  margin-bottom: 15px; text-align: center; font-family: 'ZCOOL KuaiLe', cursive;
+}
+.login-box button {
+  padding: 12px 30px; background: var(--accent-cyan); border: 3px solid var(--border-color);
+  border-radius: 15px; font-size: 22px; color: var(--text-color); cursor: pointer;
+  font-family: 'ZCOOL KuaiLe', cursive;
+}
+.error { color: red; margin-bottom: 10px; }
+</style>
+</head>
+<body>
+<div class="login-box">
+  <h1>WordPoP 登录</h1>
+  {% if error %}<p class="error">{{ error }}</p>{% endif %}
+  <form method="post">
+    <input type="text" name="username" placeholder="输入用户名（学号）" required>
+    <button type="submit">登录</button>
+  </form>
+  <p style="margin-top:15px; font-size:16px;"><a href="/" style="color:var(--text-color);">跳过，继续使用</a></p>
+</div>
+</body>
+</html>
