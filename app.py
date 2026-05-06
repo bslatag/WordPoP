@@ -1,6 +1,7 @@
 from flask import Flask, render_template
 import pandas as pd
 import random
+import os
 
 app = Flask(__name__)
 
@@ -22,8 +23,6 @@ def writing():
 @app.route('/writing/practice')
 def writing_practice():
     return render_template('writing_practice.html')
-
-import os
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
