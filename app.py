@@ -6,7 +6,7 @@ import sqlite3
 import re
 import numpy as np
 import cv2
-from paddleocr import PaddleOCR
+import easyocr
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'a-very-secret-key-for-session')
@@ -26,7 +26,6 @@ def close_connection(exception):
     if db is not None:
         db.close()
 
-# 简易的首次请求初始化数据库
 _db_initialized = False
 
 @app.before_request
@@ -224,15 +223,14 @@ def api_check_word():
         return jsonify({'valid': True, 'meaning': meaning})
     return jsonify({'valid': False, 'meaning': ''})
 
-# ------------------ PaddleOCR ------------------
-# 全局变量延迟加载
-_ocr = None
+# ------------------ EasyOCR ------------------
+_reader = None
 
-def get_ocr():
-    global _ocr
-    if _ocr is None:
-        _ocr = PaddleOCR(lang='en', use_angle_cls=False, det_db_thresh=0.3, rec_batch_num=1)
-    return _ocr
+def get_reader():
+    global _reader
+    if _reader is None:
+        _reader = easyocr.Reader(['en'], gpu=False)
+    return _reader
 
 @app.route('/api/ocr', methods=['POST'])
 def api_ocr():
@@ -245,23 +243,18 @@ def api_ocr():
     if img is None:
         return jsonify({'words': [], 'error': '图片无法解析'}), 400
 
-    ocr = get_ocr()
-    result = ocr.ocr(img, det=True, rec=True)
+    reader = get_reader()
+    result = reader.readtext(img, detail=0)
 
     candidates = []
-    if result and isinstance(result, list):
-        for line in result:
-            if not line:
-                continue
-            for item in line:
-                text = item[1][0]
-                words = re.findall(r'[a-zA-Z]{2,20}', text)
-                candidates.extend([w.lower() for w in words])
+    for text in result:
+        words = re.findall(r'[a-zA-Z]{2,20}', text)
+        candidates.extend([w.lower() for w in words])
 
     df = pd.read_excel("word.xls")
     valid_words = set(df['单词'].str.lower())
     filtered = [w for w in candidates if w in valid_words]
-    unique = list(dict.fromkeys(filtered))  # 保持顺序去重
+    unique = list(dict.fromkeys(filtered))
 
     return jsonify({
         'words': unique,
