@@ -11,7 +11,7 @@ def index():
 
 @app.route('/study')
 def study():
-     try:
+    try:
         df = pd.read_excel("word.xls")
         word_list = df.to_dict('records')
         random.shuffle(word_list)
