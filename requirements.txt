@@ -2,7 +2,3 @@ flask
 pandas
 openpyxl
 xlrd
-easyocr
-numpy
-Pillow
-opencv-python-headless
