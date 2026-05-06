@@ -7,14 +7,13 @@ import re
 import numpy as np
 import cv2
 from paddleocr import PaddleOCR
-from PIL import Image
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'a-very-secret-key-for-session')
 
 DATABASE = 'wordpop.db'
 
-# ------------------ 数据库核心工具 ------------------
+# ------------------ 数据库工具 ------------------
 def get_db():
     if '_database' not in g:
         g._database = sqlite3.connect(DATABASE)
@@ -27,12 +26,13 @@ def close_connection(exception):
     if db is not None:
         db.close()
 
-db_initialized = False
+# 简易的首次请求初始化数据库
+_db_initialized = False
 
 @app.before_request
 def init_db_on_first_request():
-    global db_initialized
-    if not db_initialized:
+    global _db_initialized
+    if not _db_initialized:
         db = get_db()
         db.executescript("""
             CREATE TABLE IF NOT EXISTS users (
@@ -60,7 +60,7 @@ def init_db_on_first_request():
             );
         """)
         db.commit()
-        db_initialized = True
+        _db_initialized = True
 
 # ------------------ 用户系统 ------------------
 def get_current_user():
@@ -224,16 +224,16 @@ def api_check_word():
         return jsonify({'valid': True, 'meaning': meaning})
     return jsonify({'valid': False, 'meaning': ''})
 
-# ------------------ PaddleOCR 初始化 ------------------
-ocr_engine = None
+# ------------------ PaddleOCR ------------------
+# 全局变量延迟加载
+_ocr = None
 
 def get_ocr():
-    global ocr_engine
-    if ocr_engine is None:
-        ocr_engine = PaddleOCR(lang='en', use_angle_cls=False, det_db_thresh=0.3, rec_batch_num=1)
-    return ocr_engine
+    global _ocr
+    if _ocr is None:
+        _ocr = PaddleOCR(lang='en', use_angle_cls=False, det_db_thresh=0.3, rec_batch_num=1)
+    return _ocr
 
-# ------------------ OCR 路由 ------------------
 @app.route('/api/ocr', methods=['POST'])
 def api_ocr():
     if 'image' not in request.files:
@@ -245,11 +245,9 @@ def api_ocr():
     if img is None:
         return jsonify({'words': [], 'error': '图片无法解析'}), 400
 
-    # PaddleOCR 直接接受图像数组，无需预处理
-    engine = get_ocr()
-    result = engine.ocr(img, det=True, rec=True)
+    ocr = get_ocr()
+    result = ocr.ocr(img, det=True, rec=True)
 
-    # 提取文本：result 格式 [ [[box, (text, confidence)], ...], ...]
     candidates = []
     if result and isinstance(result, list):
         for line in result:
@@ -257,19 +255,13 @@ def api_ocr():
                 continue
             for item in line:
                 text = item[1][0]
-                if re.match(r'^[a-zA-Z]{2,20}$', text):
-                    candidates.append(text.lower())
+                words = re.findall(r'[a-zA-Z]{2,20}', text)
+                candidates.extend([w.lower() for w in words])
 
-    # 词库过滤（保留在 Excel 中的词）
     df = pd.read_excel("word.xls")
     valid_words = set(df['单词'].str.lower())
     filtered = [w for w in candidates if w in valid_words]
-    seen = set()
-    unique = []
-    for w in filtered:
-        if w not in seen:
-            seen.add(w)
-            unique.append(w)
+    unique = list(dict.fromkeys(filtered))  # 保持顺序去重
 
     return jsonify({
         'words': unique,
