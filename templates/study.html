@@ -390,14 +390,6 @@ speakBtn.addEventListener('touchend', e => {
   }
 });
 
-// 处理点击：只有没有发生拖动时才播放默认美音
-speakBtn.addEventListener('click', (e) => {
-  if (didDrag) {
-    e.preventDefault();  // 忽略这次由 Safari 延迟触发的 click
-    return;
-  }
-  speak('en-US');
-});
 speakBtn.addEventListener('click', (e) => {
   // 如果刚才发生了拖动，则不触发 click 发音
   // 通过判断最后一次 mouseup/touchend 的时间和位移来决定
