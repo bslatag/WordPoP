@@ -31,12 +31,12 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: flex-start; 
-  padding-top: 100px;         
+  justify-content: flex-start;
+  padding-top: 100px;
 }
 .progress {
   position: absolute;
-  top: 50px; left: -20px;
+  top: 50px; left: 20px;
   font-size: 20px;
   background: rgba(255,255,255,0.5);
   padding: 4px 12px;
@@ -44,7 +44,7 @@ body {
 }
 .back-btn {
   position: absolute;
-  top: 50px; right: -20px;
+  top: 50px; right: 20px;
   width: 44px; height: 44px;
   border-radius: 50%;
   background: var(--accent-pink);
@@ -61,12 +61,11 @@ body {
   align-items: center;
   justify-content: center;
   width: 100%;
-  gap: 12px;
   margin-bottom: 16px;
 }
 .input-box {
-  flex: 1;
-  top：center；
+  width: 100%;
+  max-width: 550px;
   padding: 20px;
   font-size: 28px;
   font-family: 'Fredoka One', cursive;
@@ -74,12 +73,9 @@ body {
   border: 4px solid var(--border-color);
   border-radius: 16px;
   outline: none;
-  max-width: 550px;
 }
 .speak-btn {
   background: transparent;
-  left：center；
-  bottom：80px；
   border: none;
   font-size: 42px;
   font-weight: bold;
@@ -88,20 +84,21 @@ body {
   cursor: pointer;
   font-family: 'ZCOOL KuaiLe', cursive;
   line-height: 1;
+  margin-top: 16px;
 }
 .info {
   width: 100%;
-  max-width: 400px;
+  max-width: 550px;
   text-align: left;
   font-size: 24px;
   min-height: 36px;
   margin-bottom: 16px;
   color: var(--text-color);
-  padding-left: 10px;  /* 左对齐，微调 */
+  padding-left: 10px;
 }
 .confirm-btn {
   position: absolute;
-  bottom: 200px; right: -30px; 
+  bottom: 200px; right: 30px;
   background: transparent;
   border: none;
   font-size: 50px;
@@ -116,9 +113,10 @@ body {
   <button class="back-btn" onclick="history.back()">✕</button>
 
   <div class="input-area">
-    <button class="speak-btn" id="speakBtn">咋读咧</button>
     <input type="text" class="input-box" id="inputBox" placeholder="输入单词">
   </div>
+
+  <button class="speak-btn" id="speakBtn">咋读咧</button>
 
   <div class="info" id="info"></div>
 
@@ -126,13 +124,16 @@ body {
 </div>
 
 <script>
-// 从后端获取完整的词库释义映射，确保任何列表都能显示中文
+// 1. 加载词典（独立，不影响练习初始化）
 let wordMap = {};
 fetch('/api/dictionary')
   .then(res => res.json())
   .then(dict => { wordMap = dict; })
   .catch(() => {})
-  .finally(() => startPractice());
+  .finally(() => {
+    // 词典加载完毕，再启动练习
+    startPractice();
+  });
 
 const source = localStorage.getItem('current_practice');
 const wordList = JSON.parse(localStorage.getItem(`wordpop_${source}`) || '[]');
@@ -242,6 +243,7 @@ function startPractice() {
   if (wordList.length === 0) {
     infoEl.innerText = '暂无单词';
     inputBox.disabled = true;
+    document.getElementById('progress').innerText = '0/0';
   } else {
     randWord();
   }
