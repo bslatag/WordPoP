@@ -310,23 +310,30 @@ body {
 let currentGroup = [];
 let index = 0;
 
-// ========== 发音：拖动切换口音，点击不发声 ==========
-function speak(lang) {
+// ========== 发音（拖动选口音，松手通过 click 播放） ==========
+let pendingLang = 'en-US';
+
+function speakNow() {
   const text = document.getElementById('word').textContent;
   if (!text) return;
   window.speechSynthesis.cancel();
   const u = new SpeechSynthesisUtterance(text);
-  u.lang = lang;
+  u.lang = pendingLang;
   u.rate = 0.9;
   window.speechSynthesis.speak(u);
 
   const tip = document.getElementById('voiceTip');
-  tip.textContent = lang === 'en-GB' ? '🇬🇧 英音' : '🇺🇸 美音';
+  tip.textContent = pendingLang === 'en-GB' ? '🇬🇧 英音' : '🇺🇸 美音';
   tip.classList.add('show');
   setTimeout(() => tip.classList.remove('show'), 1200);
 }
 
-// 拖动发音
+// 点击直接播放当前口音
+document.getElementById('speakBtn').addEventListener('click', () => {
+  speakNow();
+});
+
+// 拖动视觉反馈 + 松手触发 click
 const speakBtn = document.getElementById('speakBtn');
 let startY = 0;
 
@@ -347,8 +354,10 @@ document.addEventListener('mouseup', e => {
   startY = 0;
   speakBtn.style.transition = 'transform 0.3s ease';
   speakBtn.style.transform = 'translateY(-50%)';
-  if (dy < -30) speak('en-GB');
-  else if (dy > 30) speak('en-US');
+  if (Math.abs(dy) > 30) {
+    pendingLang = dy > 30 ? 'en-US' : 'en-GB';
+    speakBtn.click(); // 模拟点击，满足 iOS 用户手势
+  }
 });
 
 speakBtn.addEventListener('touchstart', e => {
@@ -368,13 +377,10 @@ speakBtn.addEventListener('touchend', e => {
   startY = 0;
   speakBtn.style.transition = 'transform 0.3s ease';
   speakBtn.style.transform = 'translateY(-50%)';
-  if (dy < -30) speak('en-GB');
-  else if (dy > 30) speak('en-US');
-});
-
-// 禁止点击直接发音
-speakBtn.addEventListener('click', e => {
-  e.preventDefault();
+  if (Math.abs(dy) > 30) {
+    pendingLang = dy > 30 ? 'en-US' : 'en-GB';
+    speakBtn.click();
+  }
 });
 
 // ========== 左右滑动切词 ==========
@@ -454,7 +460,7 @@ function prevWord() {
   }
 }
 
-// ========== 跳过按钮（调用后端跳过接口） ==========
+// ========== 跳过按钮 ==========
 document.getElementById('skipBtn').onclick = async () => {
   if (!currentGroup.length || index >= currentGroup.length) return;
   const oldWord = currentGroup[index];
