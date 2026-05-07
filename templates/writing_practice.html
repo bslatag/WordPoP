@@ -6,28 +6,143 @@
 <title>默写练习</title>
 <link href="https://fonts.loli.net/css2?family=Fredoka+One&family=ZCOOL+KuaiLe&display=swap" rel="stylesheet">
 <style>
-:root { ... } /* 保留原有配色 */
-.container {
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
-  min-height: 100vh; gap: 16px; position: relative;
+:root {
+  --bg-color: #B9C7F8;
+  --text-color: #0D2A5A;
+  --accent-pink: #FF6B9D;
+  --accent-cyan: #00D2BE;
+  --border-color: #2D3436;
 }
-.progress { position: absolute; top: 50px; left: 20px; }
-.back-btn { position: absolute; top: 50px; right: 20px; }
-.input-box { width: 100%; max-width: 550px; padding: 20px; font-size: 28px; text-align: center; border: 4px solid var(--border-color); border-radius: 16px; }
-.info { font-size: 24px; text-align: center; }
-.speak-btn { font-size: 42px; cursor: pointer; }
-.confirm-btn { position: absolute; bottom: 80px; right: 30px; font-size: 50px; cursor: pointer; }
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family: 'ZCOOL KuaiLe', cursive;
+  background: var(--bg-color);
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.container {
+  width: 100%;
+  max-width: 600px;
+  padding: 20px;
+  position: relative;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+}
+/* 进度：无背景框，微软雅黑 */
+.progress {
+  position: absolute;
+  top: 50px; left: 20px;
+  font-family: 'Microsoft YaHei', sans-serif;
+  font-size: 20px;
+  color: var(--text-color);
+  background: none;
+  padding: 0;
+}
+/* 退出按钮 */
+.back-btn {
+  position: absolute;
+  top: 50px; right: 20px;
+  width: 44px; height: 44px;
+  border-radius: 50%;
+  background: var(--accent-pink);
+  color: #fff;
+  border: 3px solid var(--border-color);
+  font-size: 22px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 3px 3px 0 var(--border-color);
+  transition: transform 0.1s;
+  font-family: 'ZCOOL KuaiLe', cursive;
+}
+.back-btn:active {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0 var(--border-color);
+}
+/* 输入框：无边框、无背景、placeholder 半透明 */
+.input-box {
+  width: 100%;
+  max-width: 550px;
+  padding: 20px;
+  font-size: 28px;
+  font-family: 'Fredoka One', cursive;
+  text-align: center;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: #000; /* 输入的单词颜色为黑色 */
+}
+.input-box::placeholder {
+  color: rgba(0, 0, 0, 0.4); /* 半透明提醒文字 */
+  font-family: 'Fredoka One', cursive;
+}
+/* 中文释义 / 正误提示：微软雅黑，居中，颜色 #0D21A5 */
+.info {
+  font-family: 'Microsoft YaHei', sans-serif;
+  font-size: 24px;
+  text-align: center;
+  color: #0D21A5;
+  min-height: 36px;
+  transition: color 0.2s;
+}
+/* 咋读咧：站酷快乐体，背景 #D1D067，颜色 #0D21A5，立体阴影 */
+.speak-btn {
+  background: #D1D067;
+  border: none;
+  font-size: 42px;
+  font-weight: bold;
+  color: #0D21A5;
+  text-shadow:
+    -2px -2px 0 #fff,
+     2px -2px 0 #fff,
+    -2px  2px 0 #fff,
+     2px 2px 0 #fff,
+     4px 4px 0 #0D21A5;
+  cursor: pointer;
+  font-family: 'ZCOOL KuaiLe', cursive;
+  line-height: 1;
+  padding: 5px 20px;
+  border-radius: 10px;
+  transition: transform 0.1s;
+}
+.speak-btn:active {
+  transform: translate(2px, 2px);
+  box-shadow: none;
+}
+/* 确认按钮：右下角 */
+.confirm-btn {
+  position: absolute;
+  bottom: 80px; right: 30px;
+  background: transparent;
+  border: none;
+  font-size: 50px;
+  color: var(--accent-cyan);
+  cursor: pointer;
+  font-family: 'ZCOOL KuaiLe', cursive;
+}
 </style>
 </head>
 <body>
 <div class="container">
   <div class="progress" id="progress">剩余：0</div>
   <button class="back-btn" onclick="history.back()">✕</button>
+
   <input type="text" class="input-box" id="inputBox" placeholder="输入单词">
+
   <div class="info" id="info"></div>
+
   <button class="speak-btn" id="speakBtn">咋读咧</button>
+
   <button class="confirm-btn" id="confirmBtn">✔</button>
 </div>
+
 <script>
 let wordItems = [], requiredCorrect = 3, order = 'random', wordProgress = {}, current = null, answerShown = false, infoTimer = null, remainingCount = 0;
 const infoEl = document.getElementById('info'), inputBox = document.getElementById('inputBox');
@@ -53,9 +168,21 @@ const infoEl = document.getElementById('info'), inputBox = document.getElementBy
 })();
 
 function updateProgress() { document.getElementById('progress').innerText = `剩余：${remainingCount}`; }
-function showInfo(text, color) { if(infoTimer)clearTimeout(infoTimer); infoEl.innerText=text; infoEl.style.color=color; }
-function showMeaning() { if(!current)return; const item=wordItems.find(w=>w.word===current); infoEl.innerText=(item?item.meaning:'暂无释义'); infoEl.style.color='#0D2A5A'; }
-function flashInfo(text,color,duration=1500){ showInfo(text,color); infoTimer=setTimeout(()=>{showMeaning();infoTimer=null;},duration); }
+
+function showInfo(text, color) {
+  if(infoTimer)clearTimeout(infoTimer);
+  infoEl.innerText=text; infoEl.style.color=color;
+}
+function showMeaning() {
+  if(!current)return;
+  const item=wordItems.find(w=>w.word===current);
+  infoEl.innerText=(item?item.meaning:'暂无释义');
+  infoEl.style.color='#0D21A5';
+}
+function flashInfo(text,color,duration=1500){
+  showInfo(text,color);
+  infoTimer=setTimeout(()=>{showMeaning();infoTimer=null;},duration);
+}
 
 function getNextWord() {
   const avail = wordItems.filter(w => (wordProgress[w.word]?.correct||0) < requiredCorrect);
@@ -79,8 +206,8 @@ function check() {
   if (answerShown) {
     if (val === ans) {
       prog.correct=0; prog.wrong=0; answerShown=false;
-      flashInfo('正确','#00D2BE',800); inputBox.value=''; setTimeout(randWord,800);
-    } else { flashInfo('请输入上方单词','#ff4444',1200); inputBox.value=''; }
+      flashInfo('已重置，继续前进','#00D2BE',800); inputBox.value=''; setTimeout(randWord,800);
+    } else { flashInfo('请正确输入上方单词','#ff4444',1200); inputBox.value=''; }
     return;
   }
   if (val === ans) {
