@@ -135,7 +135,7 @@ body {
 }
 .speak-btn {
   position: absolute;
-  left: 20px; 
+  left: 20px;
   top: 50%;
   transform: translateY(-50%);
   background: transparent;
@@ -158,7 +158,7 @@ body {
 }
 .star-btn {
   position: absolute;
-  right: 25px; 
+  right: 25px;
   top: 50%;
   transform: translateY(-50%);
   background: var(--accent-pink);
@@ -181,7 +181,7 @@ body {
 }
 .skip-btn {
   position: absolute;
-  bottom: 40px; 
+  bottom: 40px;
   right: 10px;
   transform: none;
   background: var(--accent-cyan);
@@ -310,7 +310,7 @@ body {
 let currentGroup = [];
 let index = 0;
 
-// ========== 发音 ==========
+// ========== 发音（拖动切换口音） ==========
 function speak(lang) {
   const text = document.getElementById('word').textContent;
   if (!text) return;
@@ -318,15 +318,65 @@ function speak(lang) {
   const u = new SpeechSynthesisUtterance(text);
   u.lang = lang;
   u.rate = 0.9;
-  setTimeout(() => { window.speechSynthesis.speak(u); }, 50);
+  // 直接播放，确保 iOS 能识别为用户手势
+  window.speechSynthesis.speak(u);
+
   const tip = document.getElementById('voiceTip');
   tip.textContent = lang === 'en-GB' ? '🇬🇧 英音' : '🇺🇸 美音';
   tip.classList.add('show');
   setTimeout(() => tip.classList.remove('show'), 1200);
 }
 
-// 点击喇叭直接发音
-document.getElementById('speakBtn').addEventListener('click', () => { speak('en-US'); });
+// 拖动发音
+const speakBtn = document.getElementById('speakBtn');
+let startY = 0;
+
+speakBtn.addEventListener('mousedown', e => {
+  startY = e.clientY;
+  speakBtn.style.transition = 'none';
+  e.preventDefault();
+});
+document.addEventListener('mousemove', e => {
+  if (!startY) return;
+  let dy = e.clientY - startY;
+  dy = Math.max(-80, Math.min(80, dy));
+  speakBtn.style.transform = `translateY(-50%) translateY(${dy}px)`;
+});
+document.addEventListener('mouseup', e => {
+  if (!startY) return;
+  const dy = e.clientY - startY;
+  startY = 0;
+  speakBtn.style.transition = 'transform 0.3s ease';
+  speakBtn.style.transform = 'translateY(-50%)';
+  if (dy < -30) speak('en-GB');
+  else if (dy > 30) speak('en-US');
+});
+
+speakBtn.addEventListener('touchstart', e => {
+  startY = e.changedTouches[0].clientY;
+  speakBtn.style.transition = 'none';
+});
+document.addEventListener('touchmove', e => {
+  if (!startY) return;
+  let dy = e.changedTouches[0].clientY - startY;
+  dy = Math.max(-80, Math.min(80, dy));
+  speakBtn.style.transform = `translateY(-50%) translateY(${dy}px)`;
+  e.preventDefault();
+});
+speakBtn.addEventListener('touchend', e => {
+  if (!startY) return;
+  const dy = e.changedTouches[0].clientY - startY;
+  startY = 0;
+  speakBtn.style.transition = 'transform 0.3s ease';
+  speakBtn.style.transform = 'translateY(-50%)';
+  if (dy < -30) speak('en-GB');
+  else if (dy > 30) speak('en-US');
+});
+
+// 点击喇叭也能直接发音（防止无声）
+speakBtn.addEventListener('click', () => {
+  speak('en-US');
+});
 
 // ========== 左右滑动切词 ==========
 let startX = 0;
@@ -405,7 +455,7 @@ function prevWord() {
   }
 }
 
-// ========== 跳过按钮（调用后端跳过接口） ==========
+// ========== 跳过按钮 ==========
 document.getElementById('skipBtn').onclick = async () => {
   if (!currentGroup.length || index >= currentGroup.length) return;
   const oldWord = currentGroup[index];
@@ -417,10 +467,9 @@ document.getElementById('skipBtn').onclick = async () => {
     });
     const data = await resp.json();
     if (data.new_word) {
-      currentGroup[index] = data.new_word;   // 直接替换当前单词
+      currentGroup[index] = data.new_word;
       showWord();
     } else {
-      // 没有新词了，移除当前词，更新计数
       currentGroup.splice(index, 1);
       if (index >= currentGroup.length) {
         markLearned(currentGroup.map(w => w.单词));
@@ -505,6 +554,11 @@ async function initStudy() {
       else sb.classList.remove('active');
     }
   } catch (e) {}
+
+  // 静默唤醒语音引擎，解决首次无声问题
+  const dummy = new SpeechSynthesisUtterance('');
+  dummy.volume = 0;
+  window.speechSynthesis.speak(dummy);
 }
 
 // 登录提示按钮
