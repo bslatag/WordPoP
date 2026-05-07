@@ -63,7 +63,6 @@ body {
   align-items: center;
   justify-content: center;
 }
-/* 上传按钮（加号）遮住列表容器右上角 */
 .upload-corner-btn {
   position: absolute;
   top: -16px;
@@ -76,7 +75,7 @@ body {
   font-size: 32px;
   line-height: 1;
   cursor: pointer;
-  z-index: 20;
+  z-index: 22;
   display: none;
   align-items: center;
   justify-content: center;
@@ -97,8 +96,8 @@ body {
   width: 100%;
   max-width: 480px;
   height: 70vh;
+  overflow-x: visible;   
   overflow-y: auto;
-  overflow-x: visible;
   background: rgba(255,255,255,0.4);
   border: 3px solid var(--border-color);
   border-radius: 16px;
