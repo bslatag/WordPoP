@@ -56,12 +56,11 @@ body {
   align-items: center;
   justify-content: center;
 }
+/* 输入框容器 */
 .input-area {
-  display: flex;
-  align-items: center;
-  justify-content: center;
   width: 100%;
-  margin-bottom: 16px;
+  display: flex;
+  justify-content: center;
 }
 .input-box {
   width: 100%;
@@ -74,6 +73,19 @@ body {
   border-radius: 16px;
   outline: none;
 }
+/* 释义/正误提示：左对齐，与输入框左端对齐 */
+.info {
+  width: 100%;
+  max-width: 550px;
+  text-align: left;
+  font-size: 24px;
+  min-height: 36px;
+  margin-top: 16px;
+  margin-bottom: 16px;
+  color: var(--text-color);
+  padding-left: 0;
+}
+/* 播放按钮：居中 */
 .speak-btn {
   background: transparent;
   border: none;
@@ -84,18 +96,9 @@ body {
   cursor: pointer;
   font-family: 'ZCOOL KuaiLe', cursive;
   line-height: 1;
-  margin-top: 16px;
-}
-.info {
-  width: 100%;
-  max-width: 550px;
-  text-align: left;
-  font-size: 24px;
-  min-height: 36px;
   margin-bottom: 16px;
-  color: var(--text-color);
-  padding-left: 10px;
 }
+/* 确认按钮固定右下角，不贴底 */
 .confirm-btn {
   position: absolute;
   bottom: 200px; right: 30px;
@@ -112,28 +115,29 @@ body {
   <div class="progress" id="progress">0/0</div>
   <button class="back-btn" onclick="history.back()">✕</button>
 
+  <!-- 输入框居中 -->
   <div class="input-area">
     <input type="text" class="input-box" id="inputBox" placeholder="输入单词">
   </div>
 
-  <button class="speak-btn" id="speakBtn">咋读咧</button>
-
+  <!-- 释义区域（左对齐） -->
   <div class="info" id="info"></div>
 
+  <!-- 播放按钮居中 -->
+  <button class="speak-btn" id="speakBtn">咋读咧</button>
+
+  <!-- 确认按钮右下角 -->
   <button class="confirm-btn" id="confirmBtn">✔</button>
 </div>
 
 <script>
-// 1. 加载词典（独立，不影响练习初始化）
+// 从后端获取完整的词库释义映射
 let wordMap = {};
 fetch('/api/dictionary')
   .then(res => res.json())
   .then(dict => { wordMap = dict; })
   .catch(() => {})
-  .finally(() => {
-    // 词典加载完毕，再启动练习
-    startPractice();
-  });
+  .finally(() => startPractice());
 
 const source = localStorage.getItem('current_practice');
 const wordList = JSON.parse(localStorage.getItem(`wordpop_${source}`) || '[]');
@@ -141,9 +145,7 @@ const requiredCorrect = parseInt(localStorage.getItem('practice_required_correct
 const order = localStorage.getItem('practice_order') || 'random';
 
 let orderedList = wordList;
-if (order === 'sequential') {
-  orderedList = [...wordList].sort();
-}
+if (order === 'sequential') orderedList = [...wordList].sort();
 
 const wordProgress = {};
 let current = null;
@@ -157,31 +159,21 @@ function showInfo(text, color) {
   infoEl.innerText = text;
   infoEl.style.color = color;
 }
-
 function showMeaning() {
   if (!current) return;
   infoEl.innerText = wordMap[current] || '暂无释义';
   infoEl.style.color = '#0D2A5A';
 }
-
 function flashInfo(text, color, duration = 1500) {
   showInfo(text, color);
-  infoTimer = setTimeout(() => {
-    showMeaning();
-    infoTimer = null;
-  }, duration);
+  infoTimer = setTimeout(() => { showMeaning(); infoTimer = null; }, duration);
 }
-
 function getNextWord() {
-  const available = orderedList.filter(w => {
-    const p = wordProgress[w] || { correct: 0 };
-    return p.correct < requiredCorrect;
-  });
+  const available = orderedList.filter(w => (wordProgress[w]?.correct || 0) < requiredCorrect);
   if (available.length === 0) return null;
   if (order === 'sequential') return available[0];
   return available[Math.floor(Math.random() * available.length)];
 }
-
 function randWord() {
   const next = getNextWord();
   if (!next) {
@@ -198,18 +190,14 @@ function randWord() {
   inputBox.disabled = false;
   document.getElementById('progress').innerText = `共 ${wordList.length} 词`;
 }
-
 function check() {
   if (!current) return;
   const val = inputBox.value.trim().toLowerCase();
   const ans = current.toLowerCase();
   const prog = wordProgress[current];
-
   if (answerShown) {
     if (val === ans) {
-      prog.correct = 0;
-      prog.wrong = 0;
-      answerShown = false;
+      prog.correct = 0; prog.wrong = 0; answerShown = false;
       flashInfo('已重置，继续前进', '#00D2BE', 800);
       inputBox.value = '';
       setTimeout(randWord, 800);
@@ -219,7 +207,6 @@ function check() {
     }
     return;
   }
-
   if (val === ans) {
     prog.correct++;
     flashInfo(`正确 ${prog.correct}/${requiredCorrect}`, '#00D2BE', 1000);
@@ -232,13 +219,9 @@ function check() {
       flashInfo('错误', '#ff4444', 1000);
     }
   }
-
   inputBox.value = '';
-  if (val === ans && !answerShown) {
-    setTimeout(randWord, 1000);
-  }
+  if (val === ans && !answerShown) setTimeout(randWord, 1000);
 }
-
 function startPractice() {
   if (wordList.length === 0) {
     infoEl.innerText = '暂无单词';
@@ -248,10 +231,8 @@ function startPractice() {
     randWord();
   }
 }
-
 document.getElementById('confirmBtn').onclick = check;
 inputBox.addEventListener('keydown', e => { if (e.key === 'Enter') check(); });
-
 document.getElementById('speakBtn').onclick = () => {
   if (!current) return;
   const u = new SpeechSynthesisUtterance(current);
