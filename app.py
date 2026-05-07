@@ -1,5 +1,5 @@
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for, g
-import sqlite3, random, os, re, io, pytesseract
+import sqlite3, random, os, re, io, pytesseract, requests
 from PIL import Image, ImageFilter
 
 app = Flask(__name__)
@@ -135,10 +135,28 @@ def api_add_to_list():
     if not re.match(r'^[a-zA-Z]{2,20}$', word):
         return jsonify({'error': '无效单词格式'}), 400
     db = get_db()
-    in_dict = db.execute("SELECT 1 FROM dictionary WHERE word = ?", (word,)).fetchone() is not None
+    row = db.execute("SELECT 1 FROM dictionary WHERE word = ?", (word,)).fetchone()
+    newly_added = False
+    if not row:
+        meaning = ''
+        try:
+            resp = requests.get(f'https://dict.youdao.com/suggest?q={word}&le=eng', timeout=3)
+            data = resp.json()
+            if data.get('data') and data['data'].get('entries'):
+                entries = data['data']['entries']
+                if entries and entries[0].get('explain'):
+                    meaning = entries[0]['explain']
+        except Exception:
+            pass
+        if not meaning:
+            meaning = '暂无释义'
+        db.execute("INSERT OR IGNORE INTO dictionary (word, meaning) VALUES (?, ?)", (word, meaning))
+        db.commit()
+        newly_added = True
+
     db.execute("INSERT OR IGNORE INTO selfstudy_words (user_id, word) VALUES (?,?)", (user_id, word))
     db.commit()
-    return jsonify({'status': 'ok', 'in_dict': in_dict})
+    return jsonify({'status': 'ok', 'newly_added': newly_added})
 
 @app.route('/api/remove-from-list', methods=['POST'])
 def api_remove_from_list():
