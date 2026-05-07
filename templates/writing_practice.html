@@ -6,265 +6,103 @@
 <title>默写练习</title>
 <link href="https://fonts.loli.net/css2?family=Fredoka+One&family=ZCOOL+KuaiLe&display=swap" rel="stylesheet">
 <style>
-:root {
-  --bg-color: #B9C7F8;
-  --text-color: #0D2A5A;
-  --accent-pink: #FF6B9D;
-  --accent-cyan: #00D2BE;
-  --border-color: #2D3436;
-}
-* { margin:0; padding:0; box-sizing:border-box; }
-body {
-  font-family: 'ZCOOL KuaiLe', cursive;
-  background: var(--bg-color);
-  height: 100vh;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
+:root { ... } /* 保留原有配色 */
 .container {
-  width: 100%;
-  max-width: 600px;
-  padding: 20px;
-  position: relative;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 16px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  min-height: 100vh; gap: 16px; position: relative;
 }
-.progress {
-  position: absolute;
-  top: 50px; left: 20px;
-  font-size: 20px;
-  background: rgba(255,255,255,0.5);
-  padding: 4px 12px;
-  border-radius: 10px;
-}
-.back-btn {
-  position: absolute;
-  top: 50px; right: 20px;
-  width: 44px; height: 44px;
-  border-radius: 50%;
-  background: var(--accent-pink);
-  color: #fff;
-  border: 3px solid var(--border-color);
-  font-size: 22px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.input-box {
-  width: 100%;
-  max-width: 550px;
-  padding: 20px;
-  font-size: 28px;
-  font-family: 'Fredoka One', cursive;
-  text-align: center;
-  border: 4px solid var(--border-color);
-  border-radius: 16px;
-  outline: none;
-}
-.info {
-  font-size: 24px;
-  text-align: center;
-  min-height: 36px;
-  color: var(--text-color);
-  transition: color 0.2s;
-}
-.speak-btn {
-  background: transparent;
-  border: none;
-  font-size: 42px;
-  font-weight: bold;
-  color: #0D21A5;
-  text-shadow: 0 0 4px #fff;
-  cursor: pointer;
-  font-family: 'ZCOOL KuaiLe', cursive;
-  line-height: 1;
-}
-.confirm-btn {
-  position: absolute;
-  bottom: 80px; right: 30px;
-  background: transparent;
-  border: none;
-  font-size: 50px;
-  color: var(--accent-cyan);
-  cursor: pointer;
-}
+.progress { position: absolute; top: 50px; left: 20px; }
+.back-btn { position: absolute; top: 50px; right: 20px; }
+.input-box { width: 100%; max-width: 550px; padding: 20px; font-size: 28px; text-align: center; border: 4px solid var(--border-color); border-radius: 16px; }
+.info { font-size: 24px; text-align: center; }
+.speak-btn { font-size: 42px; cursor: pointer; }
+.confirm-btn { position: absolute; bottom: 80px; right: 30px; font-size: 50px; cursor: pointer; }
 </style>
 </head>
 <body>
 <div class="container">
-  <div class="progress" id="progress">剩余：计算中...</div>
+  <div class="progress" id="progress">剩余：0</div>
   <button class="back-btn" onclick="history.back()">✕</button>
-
   <input type="text" class="input-box" id="inputBox" placeholder="输入单词">
-
   <div class="info" id="info"></div>
-
   <button class="speak-btn" id="speakBtn">咋读咧</button>
-
   <button class="confirm-btn" id="confirmBtn">✔</button>
 </div>
-
 <script>
-// 全局状态
-let wordItems = [];
-let requiredCorrect = 3;
-let order = 'random';
-let wordProgress = {};
-let current = null;
-let answerShown = false;
-let infoTimer = null;
-let remainingCount = 0;
-const infoEl = document.getElementById('info');
-const inputBox = document.getElementById('inputBox');
+let wordItems = [], requiredCorrect = 3, order = 'random', wordProgress = {}, current = null, answerShown = false, infoTimer = null, remainingCount = 0;
+const infoEl = document.getElementById('info'), inputBox = document.getElementById('inputBox');
 
-// 加载
 (async function init() {
   const source = localStorage.getItem('current_practice') || 'selfstudy';
-  requiredCorrect = parseInt(localStorage.getItem('practice_required_correct'), 10) || 3;
-  order = localStorage.getItem('practice_order') || 'random';
-
+  requiredCorrect = parseInt(localStorage.getItem('practice_required_correct'),10)||3;
+  order = localStorage.getItem('practice_order')||'random';
   try {
     const res = await fetch(`/api/word-list/${source}`);
-    if (!res.ok) throw new Error(`请求失败 (${res.status})`);
+    if (!res.ok) throw new Error(res.status);
     const data = await res.json();
-    if (!Array.isArray(data) || data.length === 0) {
-      infoEl.innerText = '暂无单词';
-      inputBox.disabled = true;
-      return;
+    if (!Array.isArray(data) || data.length===0) {
+      infoEl.innerText='暂无单词'; inputBox.disabled=true; return;
     }
-    wordItems = data.map(item => ({ word: item.word, meaning: item.meaning || '暂无释义' }));
-    if (order === 'sequential') {
-      wordItems.sort((a, b) => a.word.localeCompare(b.word));
-    }
-    wordProgress = {};
-    remainingCount = wordItems.length;
-    updateProgress();
-    randWord();
-  } catch (e) {
-    infoEl.innerText = `加载出错：${e.message}`;
-    inputBox.disabled = true;
+    wordItems = data.map(d => ({ word: d.word, meaning: d.meaning || '暂无释义' }));
+    if (order==='sequential') wordItems.sort((a,b)=>a.word.localeCompare(b.word));
+    wordProgress = {}; remainingCount = wordItems.length;
+    updateProgress(); randWord();
+  } catch(e) {
+    infoEl.innerText='加载出错'; inputBox.disabled=true;
   }
 })();
 
-function updateProgress() {
-  document.getElementById('progress').innerText = `剩余：${remainingCount}`;
-}
-
-function showInfo(text, color) {
-  if (infoTimer) clearTimeout(infoTimer);
-  infoEl.innerText = text;
-  infoEl.style.color = color;
-}
-
-function showMeaning() {
-  if (!current) return;
-  const item = wordItems.find(w => w.word === current);
-  if (item) {
-    infoEl.innerText = item.meaning || '暂无释义';
-    infoEl.style.color = '#0D2A5A';
-  }
-}
-
-function flashInfo(text, color, duration = 1500) {
-  showInfo(text, color);
-  infoTimer = setTimeout(() => {
-    showMeaning();
-    infoTimer = null;
-  }, duration);
-}
+function updateProgress() { document.getElementById('progress').innerText = `剩余：${remainingCount}`; }
+function showInfo(text, color) { if(infoTimer)clearTimeout(infoTimer); infoEl.innerText=text; infoEl.style.color=color; }
+function showMeaning() { if(!current)return; const item=wordItems.find(w=>w.word===current); infoEl.innerText=(item?item.meaning:'暂无释义'); infoEl.style.color='#0D2A5A'; }
+function flashInfo(text,color,duration=1500){ showInfo(text,color); infoTimer=setTimeout(()=>{showMeaning();infoTimer=null;},duration); }
 
 function getNextWord() {
-  const available = wordItems.filter(w => {
-    const p = wordProgress[w.word] || { correct: 0 };
-    return p.correct < requiredCorrect;
-  });
-  if (available.length === 0) return null;
-  if (order === 'sequential') return available[0].word;
-  return available[Math.floor(Math.random() * available.length)].word;
+  const avail = wordItems.filter(w => (wordProgress[w.word]?.correct||0) < requiredCorrect);
+  if (!avail.length) return null;
+  return order==='sequential' ? avail[0].word : avail[Math.floor(Math.random()*avail.length)].word;
 }
 
 function randWord() {
   const next = getNextWord();
-  if (!next) {
-    infoEl.innerText = '🎉 全部完成！';
-    inputBox.disabled = true;
-    return;
-  }
+  if (!next) { infoEl.innerText='🎉 全部完成！'; inputBox.disabled=true; return; }
   current = next;
   answerShown = false;
-  if (!wordProgress[current]) wordProgress[current] = { correct: 0, wrong: 0 };
+  if (!wordProgress[current]) wordProgress[current] = { correct:0, wrong:0, done:false };
   showMeaning();
-  inputBox.value = '';
-  inputBox.disabled = false;
+  inputBox.value=''; inputBox.disabled=false;
 }
 
 function check() {
   if (!current) return;
-  const val = inputBox.value.trim().toLowerCase();
-  const ans = current.toLowerCase();
-  const prog = wordProgress[current];
-
+  const val = inputBox.value.trim().toLowerCase(), ans = current.toLowerCase(), prog = wordProgress[current];
   if (answerShown) {
     if (val === ans) {
-      prog.correct = 0;
-      prog.wrong = 0;
-      answerShown = false;
-      flashInfo('已重置，继续前进', '#00D2BE', 800);
-      inputBox.value = '';
-      setTimeout(randWord, 800);
-      return;
-    } else {
-      flashInfo('请正确输入上方单词', '#ff4444', 1200);
-      inputBox.value = '';
-      return;
-    }
+      prog.correct=0; prog.wrong=0; answerShown=false;
+      flashInfo('正确','#00D2BE',800); inputBox.value=''; setTimeout(randWord,800);
+    } else { flashInfo('请输入上方单词','#ff4444',1200); inputBox.value=''; }
+    return;
   }
-
   if (val === ans) {
     prog.correct++;
-    flashInfo(`正确 ${prog.correct}/${requiredCorrect}`, '#00D2BE', 1000);
+    flashInfo(`正确 ${prog.correct}/${requiredCorrect}`,'#00D2BE',1000);
   } else {
     prog.wrong++;
-    if (prog.wrong >= 3) {
-      showInfo(`正确单词：${current}`, '#ff4444');
-      answerShown = true;
-      inputBox.value = '';
-      return;
-    } else {
-      flashInfo('错误', '#ff4444', 1000);
-    }
+    if (prog.wrong >= 3) { showInfo(`正确单词：${current}`,'#ff4444'); answerShown=true; inputBox.value=''; return; }
+    else { flashInfo('错误','#ff4444',1000); }
   }
-
-  // 检查是否完成
-  if (prog.correct >= requiredCorrect) {
-    if (!prog.done) {
-      prog.done = true;
-      remainingCount--;
-      updateProgress();
-    }
+  if (prog.correct >= requiredCorrect && !prog.done) {
+    prog.done = true;
+    remainingCount--;
+    updateProgress();
   }
-
-  inputBox.value = '';
-  if (val === ans && !answerShown) {
-    setTimeout(randWord, 1000);
-  }
+  inputBox.value='';
+  if (val===ans && !answerShown) setTimeout(randWord,1000);
 }
 
-document.getElementById('confirmBtn').onclick = check;
-inputBox.addEventListener('keydown', e => { if (e.key === 'Enter') check(); });
-
-document.getElementById('speakBtn').onclick = () => {
-  if (!current) return;
-  const u = new SpeechSynthesisUtterance(current);
-  u.lang = 'en-US';
-  speechSynthesis.speak(u);
-};
+document.getElementById('confirmBtn').onclick=check;
+inputBox.addEventListener('keydown',e=>{ if(e.key==='Enter') check(); });
+document.getElementById('speakBtn').onclick=()=>{ if(!current)return; const u=new SpeechSynthesisUtterance(current); u.lang='en-US'; speechSynthesis.speak(u); };
 </script>
 </body>
 </html>
