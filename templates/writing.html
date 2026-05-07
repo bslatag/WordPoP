@@ -277,13 +277,13 @@ body {
 let currentType = '';
 let currentView = 'cards';
 let globalDictionary = {};
+let fetchSeq = 0; // 请求序列号，避免竞态
 
 fetch('/api/dictionary')
   .then(res => res.json())
   .then(dict => { globalDictionary = dict; })
   .catch(() => {});
 
-// ✅ 容错 apiFetch
 async function apiFetch(url, options = {}) {
   try {
     const res = await fetch(url, options);
@@ -316,7 +316,6 @@ function showCards() {
   currentView = 'cards';
   document.getElementById('backBtn').onclick = () => { window.location.href = '/'; };
 }
-
 function goBack() {
   if (currentView === 'list') showCards();
   else window.location.href = '/';
@@ -335,16 +334,18 @@ async function showList(type) {
 }
 
 async function refreshList(type) {
+  const seq = ++fetchSeq;
   const data = await apiFetch(`/api/word-list/${type}`);
-  renderWordListDom(type, data || []);
+  if (seq === fetchSeq) {
+    renderWordListDom(type, data || []);
+  }
 }
 
-// ✅ 修复：不清除上传按钮
 function renderWordListDom(type, list) {
   const container = document.getElementById('listBox');
   const btn = document.getElementById('uploadBtn');
 
-  // 移除所有单词项（保留上传按钮）
+  // 移除除上传按钮外的所有子元素
   let child = container.firstChild;
   while (child) {
     const next = child.nextSibling;
@@ -354,12 +355,13 @@ function renderWordListDom(type, list) {
     child = next;
   }
 
-  // 确保上传按钮在容器内（首次渲染）
+  // 确保上传按钮在容器内
   if (!container.contains(btn)) {
     container.appendChild(btn);
   }
 
-  // 创建单词条目
+  // 构建单词项
+  const fragment = document.createDocumentFragment();
   for (const w of list) {
     const item = document.createElement('div');
     item.className = 'word-item';
@@ -382,8 +384,9 @@ function renderWordListDom(type, list) {
         ${delHTML}
       </div>
     `;
-    container.appendChild(item);
+    fragment.appendChild(item);
   }
+  container.appendChild(fragment);
 }
 
 function speakWord(word) {
@@ -397,7 +400,6 @@ async function deleteWord(word) {
   await apiFetch('/api/remove-from-list', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({word}) });
   refreshList('selfstudy');
 }
-
 async function toggleStar(word) {
   await apiFetch('/api/toggle-star', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({word}) });
   refreshList(currentType);
@@ -424,7 +426,40 @@ document.getElementById('uploadBtn').onclick = function() {
   document.getElementById('fileInput').click();
 };
 
-// OCR上传处理（保持不变，仅调整容错）
+// OTSU二值化
+function otsuBinarize(imageData) {
+  const data = imageData.data;
+  let histogram = new Array(256).fill(0);
+  for (let i = 0; i < data.length; i += 4) {
+    const gray = 0.299 * data[i] + 0.587 * data[i+1] + 0.114 * data[i+2];
+    histogram[Math.floor(gray)]++;
+    data[i] = data[i+1] = data[i+2] = gray;
+  }
+  let total = imageData.width * imageData.height;
+  let sum = 0;
+  for (let i = 0; i < 256; i++) sum += i * histogram[i];
+  let sumB = 0, wB = 0, wF = 0, maxVariance = 0, threshold = 128;
+  for (let i = 0; i < 256; i++) {
+    wB += histogram[i];
+    if (wB === 0) continue;
+    wF = total - wB;
+    if (wF === 0) break;
+    sumB += i * histogram[i];
+    const mB = sumB / wB;
+    const mF = (sum - sumB) / wF;
+    const variance = wB * wF * (mB - mF) * (mB - mF);
+    if (variance > maxVariance) {
+      maxVariance = variance;
+      threshold = i;
+    }
+  }
+  for (let i = 0; i < data.length; i += 4) {
+    const val = data[i] > threshold ? 255 : 0;
+    data[i] = data[i+1] = data[i+2] = val;
+  }
+  return imageData;
+}
+
 document.getElementById('fileInput').onchange = async function(e) {
   const file = e.target.files[0];
   if (!file) return;
@@ -449,12 +484,7 @@ document.getElementById('fileInput').onchange = async function(e) {
     const ctx = canvas.getContext('2d');
     ctx.drawImage(img, 0, 0);
     const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    const data = imageData.data;
-    for (let i = 0; i < data.length; i += 4) {
-      const gray = 0.299 * data[i] + 0.587 * data[i+1] + 0.114 * data[i+2];
-      const value = gray > 128 ? 255 : 0;
-      data[i] = data[i+1] = data[i+2] = value;
-    }
+    otsuBinarize(imageData);
     ctx.putImageData(imageData, 0, 0);
     const processedDataUrl = canvas.toDataURL('image/png');
     const blob = await (await fetch(processedDataUrl)).blob();
@@ -469,6 +499,7 @@ document.getElementById('fileInput').onchange = async function(e) {
         await apiFetch('/api/add-to-list', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({word: item.word}) });
       }
       refreshList('selfstudy');
+      alert(`识别成功！共添加 ${recognitionResult.words.length} 个单词。`);
     } else {
       alert('未识别到有效单词（词库外的单词已过滤），可手动添加。');
     }
@@ -494,7 +525,6 @@ document.getElementById('startBtn').onclick = async function() {
     window.location.href = '/writing/practice';
   }
 };
-
 document.getElementById('cancelPracticeBtn').onclick = function() {
   document.getElementById('practiceModal').classList.remove('show');
 };
