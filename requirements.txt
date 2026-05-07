@@ -1,3 +1,4 @@
 flask
 pytesseract
 Pillow
+requests
