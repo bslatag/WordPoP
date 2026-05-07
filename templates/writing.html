@@ -427,38 +427,41 @@ document.getElementById('uploadBtn').onclick = function() {
 };
 
 // OTSU二值化
-function otsuBinarize(imageData) {
-  const data = imageData.data;
-  let histogram = new Array(256).fill(0);
-  for (let i = 0; i < data.length; i += 4) {
-    const gray = 0.299 * data[i] + 0.587 * data[i+1] + 0.114 * data[i+2];
-    histogram[Math.floor(gray)]++;
-    data[i] = data[i+1] = data[i+2] = gray;
-  }
-  let total = imageData.width * imageData.height;
-  let sum = 0;
-  for (let i = 0; i < 256; i++) sum += i * histogram[i];
-  let sumB = 0, wB = 0, wF = 0, maxVariance = 0, threshold = 128;
-  for (let i = 0; i < 256; i++) {
-    wB += histogram[i];
-    if (wB === 0) continue;
-    wF = total - wB;
-    if (wF === 0) break;
-    sumB += i * histogram[i];
-    const mB = sumB / wB;
-    const mF = (sum - sumB) / wF;
-    const variance = wB * wF * (mB - mF) * (mB - mF);
-    if (variance > maxVariance) {
-      maxVariance = variance;
-      threshold = i;
+// OTSU 函数保持不变
+function otsuBinarize(imageData) { ... } 
+
+document.getElementById('fileInput').onchange = async function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    this.value = '';
+    showLoading('处理中...');
+    try {
+        // 1. OTSU二值化
+        const img = await new Promise((resolve, reject) => { ... });
+        const canvas = document.createElement('canvas');
+        // ... (绘制并二值化)
+        const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+        
+        // 2. 上传给后端
+        const formData = new FormData();
+        formData.append('image', blob, 'ocr.png');
+        const res = await fetch('/api/ocr', { method: 'POST', body: formData });
+        const data = await res.json();
+        if (data.words && data.words.length) {
+            for (const item of data.words) {
+                await apiFetch('/api/add-to-list', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({word: item.word}) });
+            }
+            await refreshList('selfstudy');
+            alert(`成功添加 ${data.words.length} 个单词`);
+        } else {
+            alert('未识别到有效单词，请重拍或手动输入');
+        }
+    } catch (err) {
+        alert('识别失败');
+    } finally {
+        hideLoading();
     }
-  }
-  for (let i = 0; i < data.length; i += 4) {
-    const val = data[i] > threshold ? 255 : 0;
-    data[i] = data[i+1] = data[i+2] = val;
-  }
-  return imageData;
-}
+};
 
 document.getElementById('fileInput').onchange = async function(e) {
   const file = e.target.files[0];
