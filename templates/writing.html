@@ -75,7 +75,7 @@ body {
   font-size: 32px;
   line-height: 1;
   cursor: pointer;
-  z-index: 25;
+  z-index: 30;
   display: none;
   align-items: center;
   justify-content: center;
@@ -95,8 +95,7 @@ body {
 .list-container {
   width: 100%;
   max-width: 480px;
-  height: 70vh;
-  overflow-x: visible;   
+  height: 70vh;  
   overflow-y: auto;
   position: relative;   
   background: rgba(255,255,255,0.4);
@@ -201,9 +200,10 @@ select { font-family: 'ZCOOL KuaiLe', cursive; }
   <div class="card" onclick="showList('learned')"><h2>已学单词</h2></div>
   <div class="card" onclick="showList('selfstudy')"><h2>默写自习室</h2></div>
 
-  <div class="list-container" id="listBox">
-    <button class="upload-corner-btn" id="uploadBtn" title="添加单词（拍照/图库）">＋</button>
-  </div>
+ <div class="list-wrapper">
+  <div class="list-container" id="listBox"></div>
+  <button class="upload-corner-btn" id="uploadBtn">＋</button>
+ </div>
 
   <div class="manual-add" id="manualAddBox">
     <input type="text" id="manualAddInput" placeholder="添加英文单词">
