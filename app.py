@@ -206,19 +206,14 @@ def api_ocr():
     file = request.files['image']
     img_bytes = file.read()
     try:
+        # 直接打开前端处理好的清晰图片，只转灰度
         img = Image.open(io.BytesIO(img_bytes)).convert('L')
     except Exception:
         return jsonify({'words': [], 'error': '图片无法解析'}), 400
 
-    w, h = img.size
-    max_size = 1500
-    if w > max_size or h > max_size:
-        img.thumbnail((max_size, max_size), Image.LANCZOS)
-
-    img = img.filter(ImageFilter.SHARPEN)
-
+    # 关键：不压缩，不缩放，不做任何额外处理，让Tesseract看最清晰的图
     try:
-        text = pytesseract.image_to_string(img, lang='eng', config='--psm 3 -c tessedit_char_whitelist=abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ')
+        text = pytesseract.image_to_string(img, lang='eng', config='--psm 6 -c tessedit_char_whitelist=abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ')
     except Exception as e:
         return jsonify({'words': [], 'error': f'识别出错: {str(e)}'}), 500
 
