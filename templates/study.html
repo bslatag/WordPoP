@@ -310,7 +310,7 @@ body {
 let currentGroup = [];
 let index = 0;
 
-// ========== 发音（拖动切换口音） ==========
+// ========== 发音：拖动切换口音，点击不发声 ==========
 function speak(lang) {
   const text = document.getElementById('word').textContent;
   if (!text) return;
@@ -318,7 +318,6 @@ function speak(lang) {
   const u = new SpeechSynthesisUtterance(text);
   u.lang = lang;
   u.rate = 0.9;
-  // 直接播放，确保 iOS 能识别为用户手势
   window.speechSynthesis.speak(u);
 
   const tip = document.getElementById('voiceTip');
@@ -373,9 +372,9 @@ speakBtn.addEventListener('touchend', e => {
   else if (dy > 30) speak('en-US');
 });
 
-// 点击喇叭也能直接发音（防止无声）
-speakBtn.addEventListener('click', () => {
-  speak('en-US');
+// 禁止点击直接发音
+speakBtn.addEventListener('click', e => {
+  e.preventDefault();
 });
 
 // ========== 左右滑动切词 ==========
@@ -455,7 +454,7 @@ function prevWord() {
   }
 }
 
-// ========== 跳过按钮 ==========
+// ========== 跳过按钮（调用后端跳过接口） ==========
 document.getElementById('skipBtn').onclick = async () => {
   if (!currentGroup.length || index >= currentGroup.length) return;
   const oldWord = currentGroup[index];
@@ -554,11 +553,6 @@ async function initStudy() {
       else sb.classList.remove('active');
     }
   } catch (e) {}
-
-  // 静默唤醒语音引擎，解决首次无声问题
-  const dummy = new SpeechSynthesisUtterance('');
-  dummy.volume = 0;
-  window.speechSynthesis.speak(dummy);
 }
 
 // 登录提示按钮
