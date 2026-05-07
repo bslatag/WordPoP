@@ -307,7 +307,6 @@ body {
 </div>
 
 <script>
-// ========== 全局变量 ==========
 let currentGroup = [];
 let index = 0;
 
@@ -319,62 +318,17 @@ function speak(lang) {
   const u = new SpeechSynthesisUtterance(text);
   u.lang = lang;
   u.rate = 0.9;
-  setTimeout(() => {
-    window.speechSynthesis.speak(u);
-  }, 50);
+  setTimeout(() => { window.speechSynthesis.speak(u); }, 50);
   const tip = document.getElementById('voiceTip');
   tip.textContent = lang === 'en-GB' ? '🇬🇧 英音' : '🇺🇸 美音';
   tip.classList.add('show');
   setTimeout(() => tip.classList.remove('show'), 1200);
 }
 
-// 拖动发音
-const speakBtn = document.getElementById('speakBtn');
-let startY = 0;
+// 点击喇叭直接发音
+document.getElementById('speakBtn').addEventListener('click', () => { speak('en-US'); });
 
-speakBtn.addEventListener('mousedown', e => {
-  startY = e.clientY;
-  speakBtn.style.transition = 'none';
-  e.preventDefault();
-});
-document.addEventListener('mousemove', e => {
-  if (!startY) return;
-  let dy = e.clientY - startY;
-  dy = Math.max(-80, Math.min(80, dy));
-  speakBtn.style.transform = `translateY(-50%) translateY(${dy}px)`;
-});
-document.addEventListener('mouseup', e => {
-  if (!startY) return;
-  const dy = e.clientY - startY;
-  startY = 0;
-  speakBtn.style.transition = 'transform 0.3s ease';
-  speakBtn.style.transform = 'translateY(-50%)';
-  if (dy < -30) speak('en-GB');
-  if (dy > 30) speak('en-US');
-});
-
-speakBtn.addEventListener('touchstart', e => {
-  startY = e.changedTouches[0].clientY;
-  speakBtn.style.transition = 'none';
-});
-document.addEventListener('touchmove', e => {
-  if (!startY) return;
-  let dy = e.changedTouches[0].clientY - startY;
-  dy = Math.max(-80, Math.min(80, dy));
-  speakBtn.style.transform = `translateY(-50%) translateY(${dy}px)`;
-  e.preventDefault();
-});
-speakBtn.addEventListener('touchend', e => {
-  if (!startY) return;
-  const dy = e.changedTouches[0].clientY - startY;
-  startY = 0;
-  speakBtn.style.transition = 'transform 0.3s ease';
-  speakBtn.style.transform = 'translateY(-50%)';
-  if (dy < -30) speak('en-GB');
-  if (dy > 30) speak('en-US');
-});
-
-// 左右滑动切词
+// ========== 左右滑动切词 ==========
 let startX = 0;
 document.addEventListener('mousedown', e => { startX = e.clientX; });
 document.addEventListener('mouseup', e => {
@@ -451,17 +405,34 @@ function prevWord() {
   }
 }
 
-// ========== 跳过按钮 ==========
-document.getElementById('skipBtn').onclick = () => {
+// ========== 跳过按钮（调用后端跳过接口） ==========
+document.getElementById('skipBtn').onclick = async () => {
   if (!currentGroup.length || index >= currentGroup.length) return;
-  // 跳过当前词：index++，但不调用 updateCount，剩余不变
-  index++;
-  if (index >= currentGroup.length) {
-    markLearned(currentGroup.map(w => w.单词));
-    document.getElementById('modal').classList.add('show');
-    return;
+  const oldWord = currentGroup[index];
+  try {
+    const resp = await fetch('/api/skip-word', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({word: oldWord.单词 || oldWord})
+    });
+    const data = await resp.json();
+    if (data.new_word) {
+      currentGroup[index] = data.new_word;   // 直接替换当前单词
+      showWord();
+    } else {
+      // 没有新词了，移除当前词，更新计数
+      currentGroup.splice(index, 1);
+      if (index >= currentGroup.length) {
+        markLearned(currentGroup.map(w => w.单词));
+        document.getElementById('modal').classList.add('show');
+        return;
+      }
+      showWord();
+      updateCount();
+    }
+  } catch (e) {
+    alert('跳过失败，请重试');
   }
-  showWord();
 };
 
 // ========== 翻转卡片 ==========
