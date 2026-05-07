@@ -310,11 +310,12 @@ body {
 let currentGroup = [];
 let index = 0;
 
-// ========== 发音（核心修复） ==========
+// ========== 发音（拖动选口音，修复 iOS Safari 二次触发） ==========
+let didDrag = false;
+
 function speak(lang) {
   const text = document.getElementById('word').textContent;
   if (!text) return;
-  // 立即取消正在播放的语音，保证响应
   window.speechSynthesis.cancel();
   const u = new SpeechSynthesisUtterance(text);
   u.lang = lang;
@@ -334,15 +335,19 @@ let startY = 0;
 
 speakBtn.addEventListener('mousedown', e => {
   startY = e.clientY;
+  didDrag = false;
   speakBtn.style.transition = 'none';
-  e.preventDefault(); // 阻止文本选择等
+  e.preventDefault();
 });
+
 document.addEventListener('mousemove', e => {
   if (!startY) return;
   let dy = e.clientY - startY;
+  if (Math.abs(dy) > 10) didDrag = true;  // 移动超过10px认为是要拖动
   dy = Math.max(-80, Math.min(80, dy));
   speakBtn.style.transform = `translateY(-50%) translateY(${dy}px)`;
 });
+
 document.addEventListener('mouseup', e => {
   if (!startY) return;
   const dy = e.clientY - startY;
@@ -358,19 +363,24 @@ document.addEventListener('mouseup', e => {
 
 speakBtn.addEventListener('touchstart', e => {
   startY = e.changedTouches[0].clientY;
+  didDrag = false;
   speakBtn.style.transition = 'none';
 });
+
 document.addEventListener('touchmove', e => {
   if (!startY) return;
   let dy = e.changedTouches[0].clientY - startY;
+  if (Math.abs(dy) > 10) didDrag = true;   // 移动超过10px认为是要拖动
   dy = Math.max(-80, Math.min(80, dy));
   speakBtn.style.transform = `translateY(-50%) translateY(${dy}px)`;
-  e.preventDefault(); // 防止页面滚动
+  e.preventDefault();
 });
+
 speakBtn.addEventListener('touchend', e => {
   if (!startY) return;
   const dy = e.changedTouches[0].clientY - startY;
   startY = 0;
+  didDrag = false;   // 注意：先重置标记，再播放
   speakBtn.style.transition = 'transform 0.3s ease';
   speakBtn.style.transform = 'translateY(-50%)';
   if (dy < -30) {
@@ -380,7 +390,14 @@ speakBtn.addEventListener('touchend', e => {
   }
 });
 
-// 备用：点击直接播放默认美音
+// 处理点击：只有没有发生拖动时才播放默认美音
+speakBtn.addEventListener('click', (e) => {
+  if (didDrag) {
+    e.preventDefault();  // 忽略这次由 Safari 延迟触发的 click
+    return;
+  }
+  speak('en-US');
+});
 speakBtn.addEventListener('click', (e) => {
   // 如果刚才发生了拖动，则不触发 click 发音
   // 通过判断最后一次 mouseup/touchend 的时间和位移来决定
