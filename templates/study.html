@@ -310,37 +310,32 @@ body {
 let currentGroup = [];
 let index = 0;
 
-// ========== 发音（拖动选口音，松手通过 click 播放） ==========
-let pendingLang = 'en-US';
-
-function speakNow() {
+// ========== 发音（核心修复） ==========
+function speak(lang) {
   const text = document.getElementById('word').textContent;
   if (!text) return;
+  // 立即取消正在播放的语音，保证响应
   window.speechSynthesis.cancel();
   const u = new SpeechSynthesisUtterance(text);
-  u.lang = pendingLang;
+  u.lang = lang;
   u.rate = 0.9;
+  // 直接播放，不通过 setTimeout，满足 iOS 同步用户手势要求
   window.speechSynthesis.speak(u);
 
   const tip = document.getElementById('voiceTip');
-  tip.textContent = pendingLang === 'en-GB' ? '🇬🇧 英音' : '🇺🇸 美音';
+  tip.textContent = lang === 'en-GB' ? '🇬🇧 英音' : '🇺🇸 美音';
   tip.classList.add('show');
   setTimeout(() => tip.classList.remove('show'), 1200);
 }
 
-// 点击直接播放当前口音
-document.getElementById('speakBtn').addEventListener('click', () => {
-  speakNow();
-});
-
-// 拖动视觉反馈 + 松手触发 click
+// 拖动逻辑
 const speakBtn = document.getElementById('speakBtn');
 let startY = 0;
 
 speakBtn.addEventListener('mousedown', e => {
   startY = e.clientY;
   speakBtn.style.transition = 'none';
-  e.preventDefault();
+  e.preventDefault(); // 阻止文本选择等
 });
 document.addEventListener('mousemove', e => {
   if (!startY) return;
@@ -354,9 +349,10 @@ document.addEventListener('mouseup', e => {
   startY = 0;
   speakBtn.style.transition = 'transform 0.3s ease';
   speakBtn.style.transform = 'translateY(-50%)';
-  if (Math.abs(dy) > 30) {
-    pendingLang = dy > 30 ? 'en-US' : 'en-GB';
-    speakBtn.click(); // 模拟点击，满足 iOS 用户手势
+  if (dy < -30) {
+    speak('en-GB');
+  } else if (dy > 30) {
+    speak('en-US');
   }
 });
 
@@ -369,7 +365,7 @@ document.addEventListener('touchmove', e => {
   let dy = e.changedTouches[0].clientY - startY;
   dy = Math.max(-80, Math.min(80, dy));
   speakBtn.style.transform = `translateY(-50%) translateY(${dy}px)`;
-  e.preventDefault();
+  e.preventDefault(); // 防止页面滚动
 });
 speakBtn.addEventListener('touchend', e => {
   if (!startY) return;
@@ -377,9 +373,20 @@ speakBtn.addEventListener('touchend', e => {
   startY = 0;
   speakBtn.style.transition = 'transform 0.3s ease';
   speakBtn.style.transform = 'translateY(-50%)';
-  if (Math.abs(dy) > 30) {
-    pendingLang = dy > 30 ? 'en-US' : 'en-GB';
-    speakBtn.click();
+  if (dy < -30) {
+    speak('en-GB');
+  } else if (dy > 30) {
+    speak('en-US');
+  }
+});
+
+// 备用：点击直接播放默认美音
+speakBtn.addEventListener('click', (e) => {
+  // 如果刚才发生了拖动，则不触发 click 发音
+  // 通过判断最后一次 mouseup/touchend 的时间和位移来决定
+  // 简化处理：如果 startY 不为 0，说明还在拖动中，不播放
+  if (startY === 0) {
+    speak('en-US');
   }
 });
 
@@ -559,6 +566,11 @@ async function initStudy() {
       else sb.classList.remove('active');
     }
   } catch (e) {}
+
+  // 静默激活 iOS 语音引擎（不影响后续发音）
+  const dummy = new SpeechSynthesisUtterance('');
+  dummy.volume = 0;
+  window.speechSynthesis.speak(dummy);
 }
 
 // 登录提示按钮
