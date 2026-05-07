@@ -168,6 +168,7 @@ def api_add_to_list():
     db.execute("INSERT OR IGNORE INTO selfstudy_words (user_id, word) VALUES (?,?)", (user_id, word))
     db.commit()
     return jsonify({'status': 'ok'})
+
 @app.route('/api/remove-from-list', methods=['POST'])
 def api_remove_from_list():
     user_id = get_current_user()
@@ -225,6 +226,7 @@ def api_skip_word():
             break
     return jsonify({'new_word': new_word})
 
+# ── OCR（前端 OTSU 二值化 + 后端白名单 PSM 6）──
 @app.route('/api/ocr', methods=['POST'])
 def api_ocr():
     if 'image' not in request.files:
@@ -232,13 +234,12 @@ def api_ocr():
     file = request.files['image']
     img_bytes = file.read()
     try:
-        # 由于前端已经做了二值化，我们直接打开，不重复处理
+        # 前端已经做了二值化，直接打开灰度图
         img = Image.open(io.BytesIO(img_bytes)).convert('L')
     except Exception:
         return jsonify({'words': [], 'error': '图片无法解析'}), 400
 
-    # 不缩放，保持清晰度
-    # 使用 PSM 6（均匀文本块）加白名单（只识别字母），最大化印刷体识别率
+    # 使用 PSM 6 + 字母白名单，专攻印刷体英文
     try:
         text = pytesseract.image_to_string(img, lang='eng',
             config='--psm 6 -c tessedit_char_whitelist=abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ')
@@ -247,7 +248,6 @@ def api_ocr():
 
     candidates = re.findall(r'[a-zA-Z]{2,20}', text.lower())
     db = get_db()
-    # 一次性取出词库所有单词和释义
     rows = db.execute("SELECT word, meaning FROM dictionary").fetchall()
     word_meaning_map = {row['word']: row['meaning'] for row in rows}
     valid_set = set(word_meaning_map.keys())
@@ -258,21 +258,7 @@ def api_ocr():
         if w in valid_set and w not in seen:
             seen.add(w)
             result.append({'word': w, 'meaning': word_meaning_map.get(w, '暂无释义')})
-    return jsonify({'words': result})
-    return jsonify({'words': result, 'raw_count': len(candidates), 'filtered_count': len(result)})
-    candidates = re.findall(r'[a-zA-Z]{2,20}', text.lower())
-    db = get_db()
-    rows = db.execute("SELECT word, meaning FROM dictionary").fetchall()
-    word_meaning_map = {row['word']: row['meaning'] for row in rows}
-    valid_words_set = set(word_meaning_map.keys())
-
-    seen = set()
-    result = []
-    for w in candidates:
-        if w in valid_words_set and w not in seen:
-            seen.add(w)
-            result.append({'word': w, 'meaning': word_meaning_map.get(w, '暂无释义')})
-
+    # 统一返回格式
     return jsonify({'words': result, 'raw_count': len(candidates), 'filtered_count': len(result)})
 
 if __name__ == '__main__':
