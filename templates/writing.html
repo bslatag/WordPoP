@@ -64,7 +64,6 @@ body {
   align-items: center;
   justify-content: center;
 }
-/* 上传按钮（加号）遮住列表容器右上角 */
 .upload-corner-btn {
   position: absolute;
   top: -16px;
@@ -128,17 +127,12 @@ body {
   font-size: 16px;
   cursor: pointer;
   margin-left: 10px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
 }
 .star {
   font-size: 22px;
   color: var(--star-gold);
   cursor: pointer;
   transition: all 0.2s;
-  display: inline-flex;
-  align-items: center;
 }
 .star.active { color: var(--accent-pink); transform: scale(1.2); }
 .start-btn {
@@ -192,9 +186,7 @@ body {
 }
 .modal-btn.primary { background: var(--accent-pink); color: white; }
 .modal-btn.secondary { background: var(--card-color); color: var(--text-color); }
-select {
-  font-family: 'ZCOOL KuaiLe', cursive;
-}
+select { font-family: 'ZCOOL KuaiLe', cursive; }
 #fileInput { display: none; }
 </style>
 </head>
@@ -210,7 +202,6 @@ select {
   <div class="card" onclick="showList('selfstudy')"><h2>默写自习室</h2></div>
 
   <div class="list-container" id="listBox">
-    <!-- 上传按钮（加号）会动态放置在这里 -->
     <button class="upload-corner-btn" id="uploadBtn" title="添加单词（拍照/图库）">＋</button>
   </div>
 
@@ -263,17 +254,14 @@ select {
 <input type="file" id="fileInput" accept="image/*">
 
 <script>
-// ============ 全局状态 ============
 let currentType = '';
-let currentView = 'cards'; // 'cards' | 'list'
-let userIsGuest = true;
+let currentView = 'cards';
 
-// ============ 工具函数 ============
+// ============ 工具 ============
 async function apiFetch(url, options = {}) {
   const res = await fetch(url, options);
   return res.json();
 }
-
 function showLoading(text) {
   const el = document.createElement('div');
   el.id = '__loading__';
@@ -281,19 +269,12 @@ function showLoading(text) {
   el.innerText = text || '加载中...';
   document.body.appendChild(el);
 }
-
 function hideLoading() {
   const el = document.getElementById('__loading__');
   if (el) el.remove();
 }
 
-// ============ 用户状态 ============
-async function checkUser() {
-  const data = await apiFetch('/api/user');
-  userIsGuest = data.is_guest;
-}
-
-// ============ 页面导航 ============
+// ============ 导航 ============
 function showCards() {
   document.querySelectorAll('.card').forEach(c => c.style.display = 'block');
   document.getElementById('listBox').style.display = 'none';
@@ -303,39 +284,32 @@ function showCards() {
   currentView = 'cards';
   document.getElementById('backBtn').onclick = () => { window.location.href = '/'; };
 }
-
 function goBack() {
   if (currentView === 'list') showCards();
   else window.location.href = '/';
 }
 
+// ============ 核心函数：showList ============
 async function showList(type) {
   currentType = type;
   document.querySelectorAll('.card').forEach(c => c.style.display = 'none');
   document.getElementById('listBox').style.display = 'block';
   document.getElementById('startBtn').style.display = 'block';
-  // 上传按钮只在自习室显示
   document.getElementById('uploadBtn').style.display = (type === 'selfstudy') ? 'flex' : 'none';
-  // 手动添加也仅自习室
   document.getElementById('manualAddBox').style.display = (type === 'selfstudy') ? 'flex' : 'none';
-
   await refreshList(type);
-
   currentView = 'list';
   document.getElementById('backBtn').onclick = () => { showCards(); };
 }
 
 async function refreshList(type) {
   const data = await apiFetch(`/api/word-list/${type}`);
-  const list = data || [];
-  renderWordListDom(type, list);
+  renderWordListDom(type, data || []);
 }
 
 function renderWordListDom(type, list) {
   const container = document.getElementById('listBox');
-  // 保留上传按钮
   const btn = document.getElementById('uploadBtn');
-  // 清空（但保留上传按钮）
   container.innerHTML = '';
   container.appendChild(btn);
   for (const w of list) {
@@ -346,35 +320,22 @@ function renderWordListDom(type, list) {
       <div style="display:flex; align-items:center; gap:5px;">
         ${type === 'starred' ? `<span class="star active" onclick="toggleStar('${w}')">★</span>` : ''}
         ${type === 'selfstudy' ? `<button class="del-btn" onclick="deleteWord('${w}')">✕</button>` : ''}
-        ${type === 'learned' ? '' : ''}
       </div>
     `;
     container.appendChild(item);
   }
 }
 
-// 删除自习室单词
 async function deleteWord(word) {
-  await apiFetch('/api/remove-from-list', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({word})
-  });
+  await apiFetch('/api/remove-from-list', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({word}) });
   refreshList('selfstudy');
 }
-
-// 收藏/取消收藏
 async function toggleStar(word) {
-  const data = await apiFetch('/api/toggle-star', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({word})
-  });
-  // 刷新当前列表
+  await apiFetch('/api/toggle-star', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({word}) });
   refreshList(currentType);
 }
 
-// 手动添加单词
+// ============ 手动添加 ============
 document.getElementById('manualAddBtn').onclick = async function() {
   const input = document.getElementById('manualAddInput');
   const word = input.value.trim();
@@ -382,57 +343,35 @@ document.getElementById('manualAddBtn').onclick = async function() {
     alert('请输入有效的英文单词（2~20个字母）');
     return;
   }
-  // 检查拼写合法性（词库）
   const checkRes = await apiFetch(`/api/check-word?word=${word}`);
   if (!checkRes.valid) {
     const ok = confirm('该词不在词库中，可能拼写错误。确定添加吗？');
     if (!ok) return;
   }
-  const addRes = await apiFetch('/api/add-to-list', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({word})
-  });
-  if (addRes.status === 'ok') {
-    input.value = '';
-    refreshList('selfstudy');
-  }
+  await apiFetch('/api/add-to-list', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({word}) });
+  input.value = '';
+  refreshList('selfstudy');
 };
 
-// 上传按钮（＋）点击 → 触发文件选择
+// ============ 上传按钮（＋） ============
 document.getElementById('uploadBtn').onclick = function() {
   document.getElementById('fileInput').click();
 };
 
-// 图片选择后自动上传 OCR
 document.getElementById('fileInput').onchange = async function(e) {
-    const file = e.target.files[0];
-    if (!file) return;
-    this.value = '';
-    showLoading('识别中...');
-    try {
-        const formData = new FormData();
-        formData.append('image', file);
-        const res = await fetch('/api/ocr', { method: 'POST', body: formData });
-        const data = await res.json();
-        if (data.words && data.words.length > 0) {
-            for (const w of data.words) {
-                await apiFetch('/api/add-to-list', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({word: w})
-                });
-            }
-            refreshList('selfstudy');
-        } else {
-            alert('未识别到有效单词（词库外的单词已过滤），可手动添加。');
-        }
-    } catch (err) {
-        alert('识别请求失败，请检查网络');
-    } finally {
-        hideLoading();
-    }
-};
+  const file = e.target.files[0];
+  if (!file) return;
+  this.value = '';
+  showLoading('识别中...');
+  try {
+    const formData = new FormData();
+    formData.append('image', file);
+    const res = await fetch('/api/ocr', { method: 'POST', body: formData });
+    const data = await res.json();
+    if (data.words && data.words.length > 0) {
+      for (const w of data.words) {
+        await apiFetch('/api/add-to-list', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({word: w}) });
+      }
       refreshList('selfstudy');
     } else {
       alert('未识别到有效单词（词库外的单词已过滤），可手动添加。');
@@ -444,27 +383,22 @@ document.getElementById('fileInput').onchange = async function(e) {
   }
 };
 
-// 开始默写按钮
+// ============ 开始默写 ============
 document.getElementById('startBtn').onclick = async function() {
-  const listType = currentType;
-  const data = await apiFetch(`/api/word-list/${listType}`);
+  const data = await apiFetch(`/api/word-list/${currentType}`);
   if (data.length === 0) {
     alert('单词列表为空，请先添加单词');
     return;
   }
-  if (listType === 'selfstudy') {
-    // 弹出设置模态框
+  if (currentType === 'selfstudy') {
     document.getElementById('practiceModal').classList.add('show');
   } else {
-    // 固定3次随机
     localStorage.setItem('practice_required_correct', 3);
     localStorage.setItem('practice_order', 'random');
-    localStorage.setItem('current_practice', listType);
+    localStorage.setItem('current_practice', currentType);
     window.location.href = '/writing/practice';
   }
 };
-
-// 模态框按钮
 document.getElementById('cancelPracticeBtn').onclick = function() {
   document.getElementById('practiceModal').classList.remove('show');
 };
@@ -477,21 +411,12 @@ document.getElementById('confirmPracticeBtn').onclick = function() {
   window.location.href = '/writing/practice';
 };
 
-// ============ 登录提示（学习页完成后调用，这里简单展示） ============
-window.showLoginPrompt = function() {
-  document.getElementById('loginPromptModal').classList.add('show');
-};
-document.getElementById('laterLoginBtn').onclick = function() {
-  document.getElementById('loginPromptModal').classList.remove('show');
-};
-document.getElementById('goLoginBtn').onclick = function() {
-  window.location.href = '/login';
-};
+// 登录提示按钮
+document.getElementById('laterLoginBtn').onclick = () => document.getElementById('loginPromptModal').classList.remove('show');
+document.getElementById('goLoginBtn').onclick = () => window.location.href = '/login';
 
 // 初始化
-checkUser().then(() => {
-  showCards();
-});
+showCards();
 </script>
 </body>
 </html>
