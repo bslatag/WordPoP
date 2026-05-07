@@ -31,8 +31,8 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: flex-start;
-  padding-top: 100px;
+  justify-content: center;
+  gap: 16px;
 }
 .progress {
   position: absolute;
@@ -56,13 +56,6 @@ body {
   align-items: center;
   justify-content: center;
 }
-.input-area {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  margin-bottom: 16px;
-}
 .input-box {
   width: 100%;
   max-width: 550px;
@@ -74,6 +67,13 @@ body {
   border-radius: 16px;
   outline: none;
 }
+.info {
+  font-size: 24px;
+  text-align: center;
+  min-height: 36px;
+  color: var(--text-color);
+  transition: color 0.2s;
+}
 .speak-btn {
   background: transparent;
   border: none;
@@ -84,21 +84,10 @@ body {
   cursor: pointer;
   font-family: 'ZCOOL KuaiLe', cursive;
   line-height: 1;
-  margin-top: 16px;
-}
-.info {
-  width: 100%;
-  max-width: 550px;
-  text-align: left;
-  font-size: 24px;
-  min-height: 36px;
-  margin-bottom: 16px;
-  color: var(--text-color);
-  padding-left: 10px;
 }
 .confirm-btn {
   position: absolute;
-  bottom: 200px; right: 30px;
+  bottom: 80px; right: 30px;
   background: transparent;
   border: none;
   font-size: 50px;
@@ -109,66 +98,62 @@ body {
 </head>
 <body>
 <div class="container">
-  <div class="progress" id="progress">0/0</div>
+  <div class="progress" id="progress">剩余：计算中...</div>
   <button class="back-btn" onclick="history.back()">✕</button>
 
-  <div class="input-area">
-    <input type="text" class="input-box" id="inputBox" placeholder="输入单词">
-  </div>
-
-  <button class="speak-btn" id="speakBtn">咋读咧</button>
+  <input type="text" class="input-box" id="inputBox" placeholder="输入单词">
 
   <div class="info" id="info"></div>
+
+  <button class="speak-btn" id="speakBtn">咋读咧</button>
 
   <button class="confirm-btn" id="confirmBtn">✔</button>
 </div>
 
 <script>
-let wordMap = {};
-let wordList = [];
+// 全局状态
+let wordItems = [];
 let requiredCorrect = 3;
 let order = 'random';
-let orderedList = [];
 let wordProgress = {};
 let current = null;
 let answerShown = false;
 let infoTimer = null;
+let remainingCount = 0;
 const infoEl = document.getElementById('info');
 const inputBox = document.getElementById('inputBox');
 
-// 加载词典
-fetch('/api/dictionary')
-  .then(res => res.json())
-  .then(dict => { wordMap = dict; })
-  .catch(() => {})
-  .finally(() => initPractice());
-
-async function initPractice() {
+// 加载
+(async function init() {
   const source = localStorage.getItem('current_practice') || 'selfstudy';
-  const rounds = parseInt(localStorage.getItem('practice_required_correct'), 10) || 3;
-  const orderLocal = localStorage.getItem('practice_order') || 'random';
-  requiredCorrect = rounds;
-  order = orderLocal;
+  requiredCorrect = parseInt(localStorage.getItem('practice_required_correct'), 10) || 3;
+  order = localStorage.getItem('practice_order') || 'random';
 
   try {
-    const data = await fetch(`/api/word-list/${source}`).then(r => r.json());
-    wordList = data || [];
+    const res = await fetch(`/api/word-list/${source}`);
+    if (!res.ok) throw new Error(`请求失败 (${res.status})`);
+    const data = await res.json();
+    if (!Array.isArray(data) || data.length === 0) {
+      infoEl.innerText = '暂无单词';
+      inputBox.disabled = true;
+      return;
+    }
+    wordItems = data.map(item => ({ word: item.word, meaning: item.meaning || '暂无释义' }));
+    if (order === 'sequential') {
+      wordItems.sort((a, b) => a.word.localeCompare(b.word));
+    }
+    wordProgress = {};
+    remainingCount = wordItems.length;
+    updateProgress();
+    randWord();
   } catch (e) {
-    wordList = [];
-  }
-
-  if (wordList.length === 0) {
-    infoEl.innerText = '暂无单词';
+    infoEl.innerText = `加载出错：${e.message}`;
     inputBox.disabled = true;
-    document.getElementById('progress').innerText = '0/0';
-    return;
   }
+})();
 
-  orderedList = order === 'sequential' ? [...wordList].sort() : [...wordList];
-  wordProgress = {};
-  current = null;
-  answerShown = false;
-  randWord();
+function updateProgress() {
+  document.getElementById('progress').innerText = `剩余：${remainingCount}`;
 }
 
 function showInfo(text, color) {
@@ -179,8 +164,11 @@ function showInfo(text, color) {
 
 function showMeaning() {
   if (!current) return;
-  infoEl.innerText = wordMap[current] || '暂无释义';
-  infoEl.style.color = '#0D2A5A';
+  const item = wordItems.find(w => w.word === current);
+  if (item) {
+    infoEl.innerText = item.meaning || '暂无释义';
+    infoEl.style.color = '#0D2A5A';
+  }
 }
 
 function flashInfo(text, color, duration = 1500) {
@@ -192,13 +180,13 @@ function flashInfo(text, color, duration = 1500) {
 }
 
 function getNextWord() {
-  const available = orderedList.filter(w => {
-    const p = wordProgress[w] || { correct: 0 };
+  const available = wordItems.filter(w => {
+    const p = wordProgress[w.word] || { correct: 0 };
     return p.correct < requiredCorrect;
   });
   if (available.length === 0) return null;
-  if (order === 'sequential') return available[0];
-  return available[Math.floor(Math.random() * available.length)];
+  if (order === 'sequential') return available[0].word;
+  return available[Math.floor(Math.random() * available.length)].word;
 }
 
 function randWord() {
@@ -206,7 +194,6 @@ function randWord() {
   if (!next) {
     infoEl.innerText = '🎉 全部完成！';
     inputBox.disabled = true;
-    document.getElementById('progress').innerText = `共 ${wordList.length} 词`;
     return;
   }
   current = next;
@@ -215,7 +202,6 @@ function randWord() {
   showMeaning();
   inputBox.value = '';
   inputBox.disabled = false;
-  document.getElementById('progress').innerText = `共 ${wordList.length} 词`;
 }
 
 function check() {
@@ -232,11 +218,12 @@ function check() {
       flashInfo('已重置，继续前进', '#00D2BE', 800);
       inputBox.value = '';
       setTimeout(randWord, 800);
+      return;
     } else {
       flashInfo('请正确输入上方单词', '#ff4444', 1200);
       inputBox.value = '';
+      return;
     }
-    return;
   }
 
   if (val === ans) {
@@ -247,8 +234,19 @@ function check() {
     if (prog.wrong >= 3) {
       showInfo(`正确单词：${current}`, '#ff4444');
       answerShown = true;
+      inputBox.value = '';
+      return;
     } else {
       flashInfo('错误', '#ff4444', 1000);
+    }
+  }
+
+  // 检查是否完成
+  if (prog.correct >= requiredCorrect) {
+    if (!prog.done) {
+      prog.done = true;
+      remainingCount--;
+      updateProgress();
     }
   }
 
