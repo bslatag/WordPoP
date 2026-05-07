@@ -226,7 +226,7 @@ def api_skip_word():
             break
     return jsonify({'new_word': new_word})
 
-# ── OCR（前端 OTSU 二值化 + 后端白名单 PSM 6）──
+# ── OCR（最终稳定版）──
 @app.route('/api/ocr', methods=['POST'])
 def api_ocr():
     if 'image' not in request.files:
@@ -234,15 +234,25 @@ def api_ocr():
     file = request.files['image']
     img_bytes = file.read()
     try:
-        # 前端已经做了二值化，直接打开灰度图
         img = Image.open(io.BytesIO(img_bytes)).convert('L')
     except Exception:
         return jsonify({'words': [], 'error': '图片无法解析'}), 400
 
-    # 使用 PSM 6 + 字母白名单，专攻印刷体英文
+    # 缩放至合理尺寸，加快识别
+    w, h = img.size
+    max_size = 1500
+    if w > max_size or h > max_size:
+        img.thumbnail((max_size, max_size), Image.LANCZOS)
+
+    # 轻度锐化
+    img = img.filter(ImageFilter.SHARPEN)
+
+    # 做适度二值化（阈值 140），既保留细节，又去除背景噪音
+    img = img.point(lambda x: 0 if x < 140 else 255)
+
     try:
-        text = pytesseract.image_to_string(img, lang='eng',
-            config='--psm 6 -c tessedit_char_whitelist=abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ')
+        # 使用 PSM 3 全自动，不限制字符，让 Tesseract 自由发挥
+        text = pytesseract.image_to_string(img, lang='eng', config='--psm 3')
     except Exception as e:
         return jsonify({'words': [], 'error': f'识别出错: {str(e)}'}), 500
 
@@ -258,7 +268,7 @@ def api_ocr():
         if w in valid_set and w not in seen:
             seen.add(w)
             result.append({'word': w, 'meaning': word_meaning_map.get(w, '暂无释义')})
-    # 统一返回格式
+
     return jsonify({'words': result, 'raw_count': len(candidates), 'filtered_count': len(result)})
 
 if __name__ == '__main__':
