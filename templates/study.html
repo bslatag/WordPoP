@@ -144,12 +144,7 @@ body {
   font-size: 36px;
   font-weight: 900;
   color: #0D21A5;
-  text-shadow:
-    -2px -2px 0 #fff,
-     2px -2px 0 #fff,
-    -2px  2px 0 #fff,
-     2px 2px 0 #fff,
-     4px 4px 0 #0D21A5;
+  text-shadow: -2px -2px 0 #fff, 2px -2px 0 #fff, -2px 2px 0 #fff, 2px 2px 0 #fff, 4px 4px 0 #0D21A5;
   cursor: pointer;
   z-index: 20;
   transition: transform 0.3s cubic-bezier(0.3, 1, 0.7, 1);
@@ -328,7 +323,7 @@ function speak(lang) {
 
 const speakBtn = document.getElementById('speakBtn');
 let startY = 0;
-let hasMoved = false;   // 区分拖拽与点击
+let hasMoved = false;
 
 speakBtn.addEventListener('mousedown', (e) => {
   startY = e.clientY;
@@ -356,7 +351,6 @@ document.addEventListener('mouseup', (e) => {
     if (dy < -20) speak('en-GB');
     else if (dy > 20) speak('en-US');
   }
-  // 纯点击无反应，符合设计
   hasMoved = false;
 });
 
@@ -387,7 +381,7 @@ speakBtn.addEventListener('touchend', (e) => {
     else if (dy > 20) speak('en-US');
   }
   hasMoved = false;
-  e.preventDefault(); // 阻止 Safari 模拟的 click
+  e.preventDefault();
 });
 
 // ========== 左右滑动切词 ==========
