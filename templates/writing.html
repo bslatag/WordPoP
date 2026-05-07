@@ -273,11 +273,12 @@ body {
 
 <input type="file" id="fileInput" accept="image/*">
 
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script>
 let currentType = '';
 let currentView = 'cards';
 let globalDictionary = {};
-let fetchSeq = 0; // 请求序列号，避免竞态
+let fetchSeq = 0;
 
 fetch('/api/dictionary')
   .then(res => res.json())
@@ -365,17 +366,16 @@ function renderWordListDom(type, list) {
   for (const w of list) {
     const item = document.createElement('div');
     item.className = 'word-item';
-    let meaningText = '';
-    if (type === 'selfstudy') {
-      meaningText = globalDictionary[w] || '';
-    }
+    // 兼容新旧数据格式：w 可能是对象 {word, meaning} 也可能是纯字符串
+    const wordText = typeof w === 'object' ? w.word : w;
+    const meaningText = typeof w === 'object' ? (w.meaning || globalDictionary[wordText] || '') : (globalDictionary[wordText] || '');
     const meaningHTML = meaningText ? `<span class="meaning-text">${meaningText}</span>` : '';
-    const speakBtnHTML = (type === 'selfstudy') ? `<button class="speak-small" onclick="speakWord('${w}')">🔊</button>` : '';
-    const starHTML = (type === 'starred') ? `<span class="star active" onclick="toggleStar('${w}')">★</span>` : '';
-    const delHTML = (type === 'selfstudy') ? `<button class="del-btn" onclick="deleteWord('${w}')">✕</button>` : '';
+    const speakBtnHTML = (type === 'selfstudy') ? `<button class="speak-small" onclick="speakWord('${wordText}')">🔊</button>` : '';
+    const starHTML = (type === 'starred') ? `<span class="star active" onclick="toggleStar('${wordText}')">★</span>` : '';
+    const delHTML = (type === 'selfstudy') ? `<button class="del-btn" onclick="deleteWord('${wordText}')">✕</button>` : '';
     item.innerHTML = `
       <div class="word-text">
-        <span>${w}</span>
+        <span>${wordText}</span>
         ${meaningHTML}
       </div>
       <div class="actions">
@@ -426,92 +426,94 @@ document.getElementById('uploadBtn').onclick = function() {
   document.getElementById('fileInput').click();
 };
 
-// OTSU二值化
-// OTSU 函数保持不变
-function otsuBinarize(imageData) { ... } 
+// 前端 OCR + 后端识别
+(function() {
+  // OTSU 自适应二值化
+  function otsuBinarize(imageData) {
+    const data = imageData.data;
+    let histogram = new Array(256).fill(0);
+    for (let i = 0; i < data.length; i += 4) {
+      const gray = 0.299 * data[i] + 0.587 * data[i+1] + 0.114 * data[i+2];
+      histogram[Math.floor(gray)]++;
+      data[i] = data[i+1] = data[i+2] = gray;
+    }
+    let total = imageData.width * imageData.height;
+    let sum = 0;
+    for (let i = 0; i < 256; i++) sum += i * histogram[i];
+    let sumB = 0, wB = 0, wF = 0, maxVariance = 0, threshold = 128;
+    for (let i = 0; i < 256; i++) {
+      wB += histogram[i];
+      if (wB === 0) continue;
+      wF = total - wB;
+      if (wF === 0) break;
+      sumB += i * histogram[i];
+      const mB = sumB / wB;
+      const mF = (sum - sumB) / wF;
+      const variance = wB * wF * (mB - mF) * (mB - mF);
+      if (variance > maxVariance) {
+        maxVariance = variance;
+        threshold = i;
+      }
+    }
+    for (let i = 0; i < data.length; i += 4) {
+      const val = data[i] > threshold ? 255 : 0;
+      data[i] = data[i+1] = data[i+2] = val;
+    }
+    return imageData;
+  }
 
-document.getElementById('fileInput').onchange = async function(e) {
+  document.getElementById('fileInput').onchange = async function(e) {
     const file = e.target.files[0];
     if (!file) return;
     this.value = '';
-    showLoading('处理中...');
+    showLoading('识别中...');
     try {
-        // 1. OTSU二值化
-        const img = await new Promise((resolve, reject) => { ... });
-        const canvas = document.createElement('canvas');
-        // ... (绘制并二值化)
-        const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
-        
-        // 2. 上传给后端
-        const formData = new FormData();
-        formData.append('image', blob, 'ocr.png');
-        const res = await fetch('/api/ocr', { method: 'POST', body: formData });
-        const data = await res.json();
-        if (data.words && data.words.length) {
-            for (const item of data.words) {
-                await apiFetch('/api/add-to-list', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({word: item.word}) });
-            }
-            await refreshList('selfstudy');
-            alert(`成功添加 ${data.words.length} 个单词`);
-        } else {
-            alert('未识别到有效单词，请重拍或手动输入');
+      // 读取图片
+      const img = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          const image = new Image();
+          image.onload = () => resolve(image);
+          image.onerror = reject;
+          image.src = ev.target.result;
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+      
+      // OTSU二值化
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0);
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      otsuBinarize(imageData);
+      ctx.putImageData(imageData, 0, 0);
+      const processedDataUrl = canvas.toDataURL('image/png');
+      const blob = await (await fetch(processedDataUrl)).blob();
+      
+      const formData = new FormData();
+      formData.append('image', blob, 'clean.png');
+      const res = await fetch('/api/ocr', { method: 'POST', body: formData });
+      const recognitionResult = await res.json();
+      
+      if (recognitionResult.words && recognitionResult.words.length > 0) {
+        for (const item of recognitionResult.words) {
+          await apiFetch('/api/add-to-list', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({word: item.word}) });
         }
-    } catch (err) {
-        alert('识别失败');
-    } finally {
-        hideLoading();
-    }
-};
-
-document.getElementById('fileInput').onchange = async function(e) {
-  const file = e.target.files[0];
-  if (!file) return;
-  this.value = '';
-  showLoading('识别中...');
-  try {
-    const img = await new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        const image = new Image();
-        image.onload = () => resolve(image);
-        image.onerror = reject;
-        image.src = ev.target.result;
-      };
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    });
-    
-    const canvas = document.createElement('canvas');
-    canvas.width = img.width;
-    canvas.height = img.height;
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(img, 0, 0);
-    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    otsuBinarize(imageData);
-    ctx.putImageData(imageData, 0, 0);
-    const processedDataUrl = canvas.toDataURL('image/png');
-    const blob = await (await fetch(processedDataUrl)).blob();
-    
-    const formData = new FormData();
-    formData.append('image', blob, 'clean.png');
-    const res = await fetch('/api/ocr', { method: 'POST', body: formData });
-    const recognitionResult = await res.json();
-    
-    if (recognitionResult.words && recognitionResult.words.length > 0) {
-      for (const item of recognitionResult.words) {
-        await apiFetch('/api/add-to-list', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({word: item.word}) });
+        refreshList('selfstudy');
+        alert(`识别成功！共添加 ${recognitionResult.words.length} 个单词。`);
+      } else {
+        alert('未识别到有效单词（词库外的单词已过滤），可手动添加。');
       }
-      refreshList('selfstudy');
-      alert(`识别成功！共添加 ${recognitionResult.words.length} 个单词。`);
-    } else {
-      alert('未识别到有效单词（词库外的单词已过滤），可手动添加。');
+    } catch (err) {
+      alert('识别失败，请重试');
+    } finally {
+      hideLoading();
     }
-  } catch (err) {
-    alert('识别失败，请重试');
-  } finally {
-    hideLoading();
-  }
-};
+  };
+})();
 
 document.getElementById('startBtn').onclick = async function() {
   const data = await apiFetch(`/api/word-list/${currentType}`);
@@ -528,9 +530,11 @@ document.getElementById('startBtn').onclick = async function() {
     window.location.href = '/writing/practice';
   }
 };
+
 document.getElementById('cancelPracticeBtn').onclick = function() {
   document.getElementById('practiceModal').classList.remove('show');
 };
+
 document.getElementById('confirmPracticeBtn').onclick = function() {
   const rounds = document.getElementById('modalRoundsSelect').value;
   const order = document.getElementById('modalOrderSelect').value;
