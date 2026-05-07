@@ -15,68 +15,313 @@
   --border-color: #2D3436;
 }
 * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
-body { font-family: 'ZCOOL KuaiLe', cursive; background-color: var(--bg-color); height: 100vh; display: flex; justify-content: center; align-items: center; overflow: hidden; user-select: none; }
-.container { width: 100%; max-width: 900px; height: 100%; position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-.header { position: absolute; top: 40px; width: 90%; display: flex; justify-content: space-between; align-items: center; z-index: 10; }
-.progress { background: white; padding: 8px 16px; border-radius: 20px; border: 3px solid var(--border-color); box-shadow: 4px 4px 0 var(--border-color); color: var(--text-color); font-size: 20px; transform: rotate(-2deg); }
-.back-btn { background: var(--accent-pink); color: white; border: 3px solid var(--border-color); width: 40px; height: 40px; border-radius: 50%; font-size: 20px; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 3px 3px 0 var(--border-color); transition: transform 0.1s; }
-.back-btn:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--border-color); }
-.card-box { width: 500px; height: 349px; background: var(--card-color); border: 4px solid var(--border-color); border-radius: 30px; box-shadow: 12px 12px 0 var(--border-color); position: relative; z-index: 5; cursor: pointer; transform-style: preserve-3d; perspective: 1000px; transition: transform 0.6s; }
-.card-box.flipped { transform: rotateY(180deg); }
-.word-content { position: absolute; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; backface-visibility: hidden; }
-.meaning-content { position: absolute; width: 100%; height: 100%; display: none; flex-direction: column; align-items: center; justify-content: center; padding: 40px; backface-visibility: hidden; transform: rotateY(180deg); }
-.word { font-family: 'Fredoka One', cursive; font-size: 75px; color: var(--text-color); text-shadow: 4px 4px 0 rgba(255,255,255,0.4); margin-bottom: 15px; }
-.phonetic { font-size: 22px; color: var(--text-color); background: rgba(255,255,255,0.4); padding: 5px 15px; border-radius: 10px; border: 2px solid var(--border-color); }
-.meaning { font-size: 32px; color: var(--text-color); line-height: 1.5; text-align: center; }
-.speak-btn { position: absolute; left: 20px; top: 50%; transform: translateY(-50%); background: transparent; border: none; font-family: 'ZCOOL KuaiLe', cursive; font-size: 36px; font-weight: 900; color: #0D21A5; text-shadow: -2px -2px 0 #fff, 2px -2px 0 #fff, -2px 2px 0 #fff, 2px 2px 0 #fff, 4px 4px 0 #0D21A5; cursor: pointer; z-index: 20; transition: transform 0.3s cubic-bezier(0.3, 1, 0.7, 1); white-space: nowrap; user-select: none; }
-.star-btn { position: absolute; right: 25px; top: 50%; transform: translateY(-50%); background: var(--accent-pink); border: 3px solid var(--border-color); width: 60px; height: 60px; border-radius: 50%; font-size: 30px; color: white; display: flex; align-items: center; justify-content: center; box-shadow: 5px 5px 0 var(--border-color); transition: all 0.2s; z-index: 20; }
-.star-btn.active { background: #FFD700; transform: translateY(-50%) rotate(30deg) scale(1.1); }
-.skip-btn { position: absolute; bottom: 40px; right: 10px; transform: none; background: var(--accent-cyan); border: 3px solid var(--border-color); border-radius: 20px; padding: 12px 30px; font-size: 22px; color: var(--text-color); box-shadow: 5px 5px 0 var(--border-color); transition: all 0.1s; z-index: 20; }
-.skip-btn:active { transform: translate(3px, 3px); box-shadow: 2px 2px 0 var(--border-color); }
-.voice-tip { position: absolute; top: 100px; right: 40px; background: #0D21A5; color: white; padding: 6px 12px; border-radius: 10px; font-size: 16px; opacity: 0; transition: opacity 0.3s; z-index: 100; border: 2px solid white; }
+body {
+  font-family: 'ZCOOL KuaiLe', cursive;
+  background-color: var(--bg-color);
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+  user-select: none;
+}
+.container {
+  width: 100%;
+  max-width: 900px;
+  height: 100%;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.header {
+  position: absolute;
+  top: 40px;
+  width: 90%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  z-index: 10;
+}
+.progress {
+  background: white;
+  padding: 8px 16px;
+  border-radius: 20px;
+  border: 3px solid var(--border-color);
+  box-shadow: 4px 4px 0 var(--border-color);
+  color: var(--text-color);
+  font-size: 20px;
+  transform: rotate(-2deg);
+}
+.back-btn {
+  background: var(--accent-pink);
+  color: white;
+  border: 3px solid var(--border-color);
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  font-size: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 3px 3px 0 var(--border-color);
+  transition: transform 0.1s;
+}
+.back-btn:active {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0 var(--border-color);
+}
+.card-box {
+  width: 500px;
+  height: 349px;
+  background: var(--card-color);
+  border: 4px solid var(--border-color);
+  border-radius: 30px;
+  box-shadow: 12px 12px 0 var(--border-color);
+  position: relative;
+  z-index: 5;
+  cursor: pointer;
+  transform-style: preserve-3d;
+  perspective: 1000px;
+  transition: transform 0.6s;
+}
+.card-box.flipped {
+  transform: rotateY(180deg);
+}
+.word-content {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  backface-visibility: hidden;
+}
+.meaning-content {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  backface-visibility: hidden;
+  transform: rotateY(180deg);
+}
+.word {
+  font-family: 'Fredoka One', cursive;
+  font-size: 75px;
+  color: var(--text-color);
+  text-shadow: 4px 4px 0 rgba(255,255,255,0.4);
+  margin-bottom: 15px;
+}
+.phonetic {
+  font-size: 22px;
+  color: var(--text-color);
+  background: rgba(255,255,255,0.4);
+  padding: 5px 15px;
+  border-radius: 10px;
+  border: 2px solid var(--border-color);
+}
+.meaning {
+  font-size: 32px;
+  color: var(--text-color);
+  line-height: 1.5;
+  text-align: center;
+}
+.speak-btn {
+  position: absolute;
+  left: 20px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  font-family: 'ZCOOL KuaiLe', cursive;
+  font-size: 36px;
+  font-weight: 900;
+  color: #0D21A5;
+  text-shadow:
+    -2px -2px 0 #fff,
+     2px -2px 0 #fff,
+    -2px  2px 0 #fff,
+     2px 2px 0 #fff,
+     4px 4px 0 #0D21A5;
+  cursor: pointer;
+  z-index: 20;
+  transition: transform 0.3s cubic-bezier(0.3, 1, 0.7, 1);
+  white-space: nowrap;
+  user-select: none;
+}
+.star-btn {
+  position: absolute;
+  right: 25px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: var(--accent-pink);
+  border: 3px solid var(--border-color);
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  font-size: 30px;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 5px 5px 0 var(--border-color);
+  transition: all 0.2s;
+  z-index: 20;
+}
+.star-btn.active {
+  background: #FFD700;
+  transform: translateY(-50%) rotate(30deg) scale(1.1);
+}
+.skip-btn {
+  position: absolute;
+  bottom: 40px;
+  right: 10px;
+  transform: none;
+  background: var(--accent-cyan);
+  border: 3px solid var(--border-color);
+  border-radius: 20px;
+  padding: 12px 30px;
+  font-size: 22px;
+  color: var(--text-color);
+  box-shadow: 5px 5px 0 var(--border-color);
+  transition: all 0.1s;
+  z-index: 20;
+}
+.skip-btn:active {
+  transform: translate(3px, 3px);
+  box-shadow: 2px 2px 0 var(--border-color);
+}
+.voice-tip {
+  position: absolute;
+  top: 100px;
+  right: 40px;
+  background: #0D21A5;
+  color: white;
+  padding: 6px 12px;
+  border-radius: 10px;
+  font-size: 16px;
+  opacity: 0;
+  transition: opacity 0.3s;
+  z-index: 100;
+  border: 2px solid white;
+}
 .voice-tip.show { opacity: 1; }
-.modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(45,52,54,0.8); display: none; align-items: center; justify-content: center; z-index: 999; backdrop-filter: blur(5px); }
+.modal {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(45,52,54,0.8);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+  backdrop-filter: blur(5px);
+}
 .modal.show { display: flex; }
-.modal-content { background: white; border: 4px solid var(--border-color); border-radius: 30px; padding: 40px; text-align: center; box-shadow: 15px 15px 0 rgba(0,0,0,0.2); }
-.modal-content h3 { font-size: 32px; color: var(--text-color); margin-bottom: 20px; }
-.modal-btns { display: flex; gap: 20px; justify-content: center; }
-.modal-btn { padding: 15px 30px; border-radius: 15px; border: 3px solid var(--border-color); font-size: 20px; font-family: 'ZCOOL KuaiLe', cursive; cursor: pointer; }
-.modal-btn.primary { background: var(--accent-pink); color: white; }
-.modal-btn.secondary { background: var(--card-color); color: var(--text-color); }
+.modal-content {
+  background: white;
+  border: 4px solid var(--border-color);
+  border-radius: 30px;
+  padding: 40px;
+  text-align: center;
+  box-shadow: 15px 15px 0 rgba(0,0,0,0.2);
+}
+.modal-content h3 {
+  font-size: 32px;
+  color: var(--text-color);
+  margin-bottom: 20px;
+}
+.modal-btns {
+  display: flex;
+  gap: 20px;
+  justify-content: center;
+}
+.modal-btn {
+  padding: 15px 30px;
+  border-radius: 15px;
+  border: 3px solid var(--border-color);
+  font-size: 20px;
+  font-family: 'ZCOOL KuaiLe', cursive;
+  cursor: pointer;
+}
+.modal-btn.primary {
+  background: var(--accent-pink);
+  color: white;
+}
+.modal-btn.secondary {
+  background: var(--card-color);
+  color: var(--text-color);
+}
 </style>
 </head>
+
 <body>
 <div class="container">
-  <div class="header"><div class="progress" id="count">剩余：30</div><button class="back-btn" id="backBtn">✕</button></div>
-  <div class="voice-tip" id="voiceTip"></div>
-  <div class="card-box" id="cardBox">
-    <div class="word-content"><div class="word" id="word">Loading</div><div class="phonetic" id="phonetic"></div></div>
-    <div class="meaning-content"><div class="meaning" id="meaning"></div></div>
+  <div class="header">
+    <div class="progress" id="count">剩余：30</div>
+    <button class="back-btn" id="backBtn">✕</button>
   </div>
+
+  <div class="voice-tip" id="voiceTip"></div>
+
+  <div class="card-box" id="cardBox">
+    <div class="word-content">
+      <div class="word" id="word">Loading</div>
+      <div class="phonetic" id="phonetic"></div>
+    </div>
+    <div class="meaning-content">
+      <div class="meaning" id="meaning"></div>
+    </div>
+  </div>
+
   <button class="speak-btn" id="speakBtn">咋读咧？</button>
   <button class="star-btn" id="starBtn">★</button>
   <button class="skip-btn" id="skipBtn">跳过</button>
 </div>
 
 <div class="modal" id="modal">
-  <div class="modal-content"><h3>今日任务完成！</h3><div class="modal-btns"><button class="modal-btn primary" id="writeBtn">去默写</button><button class="modal-btn secondary" id="continueBtn">再来一组</button></div></div>
+  <div class="modal-content">
+    <h3>今日任务完成！</h3>
+    <div class="modal-btns">
+      <button class="modal-btn primary" id="writeBtn">去默写</button>
+      <button class="modal-btn secondary" id="continueBtn">再来一组</button>
+    </div>
+  </div>
 </div>
+
 <div class="modal" id="loginPromptModal">
-  <div class="modal-content"><h3>登录后可保存进度</h3><p style="margin-bottom:20px;">登录后学习记录和收藏不会丢失哦</p><div class="modal-btns"><button class="modal-btn secondary" id="laterLoginBtn">稍后再说</button><button class="modal-btn primary" id="goLoginBtn">去登录</button></div></div>
+  <div class="modal-content">
+    <h3>登录后可保存进度</h3>
+    <p style="margin-bottom:20px;">登录后学习记录和收藏不会丢失哦</p>
+    <div class="modal-btns">
+      <button class="modal-btn secondary" id="laterLoginBtn">稍后再说</button>
+      <button class="modal-btn primary" id="goLoginBtn">去登录</button>
+    </div>
+  </div>
 </div>
 
 <script>
 let currentGroup = [];
 let index = 0;
 
+// ========== 发音（终极修复） ==========
 function speak(lang) {
   const text = document.getElementById('word').textContent;
   if (!text) return;
+  // 先取消再播放，保证连续操作流畅
   window.speechSynthesis.cancel();
   const u = new SpeechSynthesisUtterance(text);
   u.lang = lang;
   u.rate = 0.9;
+  // 直接播放，没有任何延迟，这是iOS必须的
   window.speechSynthesis.speak(u);
+
   const tip = document.getElementById('voiceTip');
   tip.textContent = lang === 'en-GB' ? '🇬🇧 英音' : '🇺🇸 美音';
   tip.classList.add('show');
@@ -85,119 +330,246 @@ function speak(lang) {
 
 const speakBtn = document.getElementById('speakBtn');
 let startY = 0;
+let hasMoved = false;
 
-speakBtn.addEventListener('mousedown', e => {
+// 鼠标/触摸开始
+speakBtn.addEventListener('mousedown', (e) => {
   startY = e.clientY;
+  hasMoved = false;
   speakBtn.style.transition = 'none';
-  e.preventDefault();
+  e.preventDefault(); // 阻止默认的文本选择
 });
-document.addEventListener('mousemove', e => {
+speakBtn.addEventListener('touchstart', (e) => {
+  startY = e.changedTouches[0].clientY;
+  hasMoved = false;
+  speakBtn.style.transition = 'none';
+});
+
+// 移动
+document.addEventListener('mousemove', (e) => {
   if (!startY) return;
   let dy = e.clientY - startY;
+  if (Math.abs(dy) > 5) hasMoved = true;
   dy = Math.max(-80, Math.min(80, dy));
   speakBtn.style.transform = `translateY(-50%) translateY(${dy}px)`;
 });
-document.addEventListener('mouseup', e => {
+document.addEventListener('touchmove', (e) => {
+  if (!startY) return;
+  let dy = e.changedTouches[0].clientY - startY;
+  if (Math.abs(dy) > 5) hasMoved = true;
+  dy = Math.max(-80, Math.min(80, dy));
+  speakBtn.style.transform = `translateY(-50%) translateY(${dy}px)`;
+  e.preventDefault(); // 防止页面滚动
+}, { passive: false });
+
+// 松手
+document.addEventListener('mouseup', (e) => {
   if (!startY) return;
   const dy = e.clientY - startY;
   startY = 0;
   speakBtn.style.transition = 'transform 0.3s ease';
   speakBtn.style.transform = 'translateY(-50%)';
-  if (dy < -30) speak('en-GB');
-  else if (dy > 30) speak('en-US');
+  if (hasMoved) {
+    if (dy < -20) speak('en-GB');
+    else if (dy > 20) speak('en-US');
+  }
+  // 点击不发声，只有拖拽才发声，这是你的设计
+  hasMoved = false;
 });
 
-speakBtn.addEventListener('touchstart', e => {
-  startY = e.changedTouches[0].clientY;
-  speakBtn.style.transition = 'none';
-});
-document.addEventListener('touchmove', e => {
-  if (!startY) return;
-  let dy = e.changedTouches[0].clientY - startY;
-  dy = Math.max(-80, Math.min(80, dy));
-  speakBtn.style.transform = `translateY(-50%) translateY(${dy}px)`;
-  e.preventDefault();
-});
-speakBtn.addEventListener('touchend', e => {
+speakBtn.addEventListener('touchend', (e) => {
   if (!startY) return;
   const dy = e.changedTouches[0].clientY - startY;
   startY = 0;
   speakBtn.style.transition = 'transform 0.3s ease';
   speakBtn.style.transform = 'translateY(-50%)';
-  if (dy < -30) speak('en-GB');
-  else if (dy > 30) speak('en-US');
+  if (hasMoved) {
+    if (dy < -20) speak('en-GB');
+    else if (dy > 20) speak('en-US');
+  }
+  hasMoved = false;
+  // 注意：不调用 e.preventDefault()，保持事件冒泡，让 iOS 认为语音来自手势
 });
 
-speakBtn.addEventListener('click', e => e.preventDefault());
-
+// ========== 左右滑动切词 ==========
 let startX = 0;
 document.addEventListener('mousedown', e => { startX = e.clientX; });
-document.addEventListener('mouseup', e => { if (Math.abs(e.clientX - startX) > 100) e.clientX < startX ? nextWord() : prevWord(); });
+document.addEventListener('mouseup', e => {
+  const dx = e.clientX - startX;
+  if (Math.abs(dx) > 100) dx < 0 ? nextWord() : prevWord();
+});
 document.addEventListener('touchstart', e => { startX = e.changedTouches[0].clientX; });
-document.addEventListener('touchend', e => { if (Math.abs(e.changedTouches[0].clientX - startX) > 100) e.changedTouches[0].clientX < startX ? nextWord() : prevWord(); });
+document.addEventListener('touchend', e => {
+  const dx = e.changedTouches[0].clientX - startX;
+  if (Math.abs(dx) > 100) dx < 0 ? nextWord() : prevWord();
+});
 
+// ========== 收藏 ==========
 function getStarred() { return JSON.parse(localStorage.getItem('starred_list') || '[]'); }
 function setStarred(list) { localStorage.setItem('starred_list', JSON.stringify(list)); }
+
 document.getElementById('starBtn').onclick = async function() {
   const w = currentGroup[index]?.单词;
   if (!w) return;
-  const data = await fetch('/api/toggle-star', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({word: w}) }).then(r=>r.json());
+  const data = await fetch('/api/toggle-star', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({word: w})
+  }).then(r => r.json());
   let s = getStarred();
-  if (data.action === 'added') s.push(w); else s = s.filter(x => x !== w);
+  if (data.action === 'added') s.push(w);
+  else s = s.filter(x => x !== w);
   setStarred(s);
   document.getElementById('starBtn').classList.toggle('active', data.action === 'added');
 };
 
-function updateCount() { document.getElementById('count').textContent = `剩余：${currentGroup.length - index}`; }
+// ========== 进度 & 单词显示 ==========
+function updateCount() {
+  const left = currentGroup.length - index;
+  document.getElementById('count').textContent = `剩余：${left}`;
+}
+
 function showWord() {
-  if (!currentGroup.length || index >= currentGroup.length) { markLearned(currentGroup.map(w => w.单词)); document.getElementById('modal').classList.add('show'); return; }
+  if (!currentGroup.length || index >= currentGroup.length) {
+    markLearned(currentGroup.map(w => w.单词));
+    document.getElementById('modal').classList.add('show');
+    return;
+  }
   const w = currentGroup[index];
   document.getElementById('word').textContent = w.单词 || '';
   document.getElementById('phonetic').textContent = w.音标 || '';
   document.getElementById('meaning').textContent = w.释义 || '';
-  document.querySelector('.word-content').style.display = 'flex'; document.querySelector('.meaning-content').style.display = 'none'; cardBox.classList.remove('flipped');
-  const sb = document.getElementById('starBtn'); if (getStarred().includes(w.单词)) sb.classList.add('active'); else sb.classList.remove('active');
-}
-function nextWord() { index++; updateCount(); if (index >= currentGroup.length) { markLearned(currentGroup.map(w => w.单词)); document.getElementById('modal').classList.add('show'); return; } showWord(); }
-function prevWord() { if (index > 0) { index--; showWord(); updateCount(); } }
 
+  document.querySelector('.word-content').style.display = 'flex';
+  document.querySelector('.meaning-content').style.display = 'none';
+  cardBox.classList.remove('flipped');
+
+  const sb = document.getElementById('starBtn');
+  if (getStarred().includes(w.单词)) sb.classList.add('active');
+  else sb.classList.remove('active');
+}
+
+function nextWord() {
+  index++;
+  updateCount();
+  if (index >= currentGroup.length) {
+    markLearned(currentGroup.map(w => w.单词));
+    document.getElementById('modal').classList.add('show');
+    return;
+  }
+  showWord();
+}
+
+function prevWord() {
+  if (index > 0) {
+    index--;
+    showWord();
+    updateCount();
+  }
+}
+
+// ========== 跳过按钮 ==========
 document.getElementById('skipBtn').onclick = async () => {
   if (!currentGroup.length || index >= currentGroup.length) return;
   const oldWord = currentGroup[index];
   try {
-    const resp = await fetch('/api/skip-word', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({word: oldWord.单词 || oldWord}) });
+    const resp = await fetch('/api/skip-word', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({word: oldWord.单词 || oldWord})
+    });
     const data = await resp.json();
-    if (data.new_word) { currentGroup[index] = data.new_word; showWord(); }
-    else { currentGroup.splice(index, 1); if (index >= currentGroup.length) { markLearned(currentGroup.map(w => w.单词)); document.getElementById('modal').classList.add('show'); return; } showWord(); updateCount(); }
-  } catch (e) { alert('跳过失败，请重试'); }
+    if (data.new_word) {
+      currentGroup[index] = data.new_word;
+      showWord();
+    } else {
+      currentGroup.splice(index, 1);
+      if (index >= currentGroup.length) {
+        markLearned(currentGroup.map(w => w.单词));
+        document.getElementById('modal').classList.add('show');
+        return;
+      }
+      showWord();
+      updateCount();
+    }
+  } catch (e) {
+    alert('跳过失败，请重试');
+  }
 };
 
+// ========== 翻转卡片 ==========
 document.getElementById('cardBox').addEventListener('click', () => {
-  const cb = document.getElementById('cardBox'), front = document.querySelector('.word-content'), back = document.querySelector('.meaning-content');
+  const cb = document.getElementById('cardBox');
+  const front = document.querySelector('.word-content');
+  const back = document.querySelector('.meaning-content');
   cb.classList.toggle('flipped');
-  if (cb.classList.contains('flipped')) { document.getElementById('voiceTip').classList.remove('show'); front.style.display = 'none'; back.style.display = 'flex'; }
-  else { front.style.display = 'flex'; back.style.display = 'none'; }
+  if (cb.classList.contains('flipped')) {
+    document.getElementById('voiceTip').classList.remove('show');
+    front.style.display = 'none';
+    back.style.display = 'flex';
+  } else {
+    front.style.display = 'flex';
+    back.style.display = 'none';
+  }
 });
-document.getElementById('backBtn').onclick = () => { window.location.href = '/'; };
-async function markLearned(words) { if (!words.length) return; await fetch('/api/mark-learned', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({words}) }); }
 
-async function checkAndPromptLogin() {
-  const data = await fetch('/api/user').then(r=>r.json());
-  if (data.is_guest) document.getElementById('loginPromptModal').classList.add('show');
+document.getElementById('backBtn').onclick = () => {
+  window.location.href = '/';
+};
+
+// ========== 标记已学 ==========
+async function markLearned(words) {
+  if (!words.length) return;
+  try {
+    await fetch('/api/mark-learned', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({words})
+    });
+  } catch (e) {}
 }
 
+// ========== 登录提示 ==========
+async function checkAndPromptLogin() {
+  try {
+    const data = await fetch('/api/user').then(r => r.json());
+    if (data.is_guest) {
+      document.getElementById('loginPromptModal').classList.add('show');
+    }
+  } catch (e) {}
+}
+
+// ========== 初始化学习 ==========
 async function initStudy() {
   let data = [];
-  try { const res = await fetch('/api/study-words'); data = await res.json(); } catch(e) {}
+  try {
+    const res = await fetch('/api/study-words');
+    data = await res.json();
+  } catch (e) {}
   currentGroup = data || [];
   if (currentGroup.length === 0) {
-    document.getElementById('word').textContent = '暂无单词'; document.getElementById('phonetic').textContent = ''; document.getElementById('meaning').textContent = ''; document.getElementById('count').textContent = '剩余：0';
+    document.getElementById('word').textContent = '暂无单词';
+    document.getElementById('phonetic').textContent = '';
+    document.getElementById('meaning').textContent = '';
+    document.getElementById('count').textContent = '剩余：0';
     return;
   }
-  index = 0; updateCount(); showWord();
-  fetch('/api/word-list/starred').then(r=>r.json()).then(list=>{ setStarred(list); if (currentGroup[index]) { const sb = document.getElementById('starBtn'); if (list.includes(currentGroup[index].单词)) sb.classList.add('active'); else sb.classList.remove('active'); } });
+  index = 0;
+  updateCount();
+  showWord();
+
+  try {
+    const starred = await fetch('/api/word-list/starred').then(r => r.json());
+    setStarred(starred);
+    if (currentGroup[index]) {
+      const sb = document.getElementById('starBtn');
+      if (starred.includes(currentGroup[index].单词)) sb.classList.add('active');
+      else sb.classList.remove('active');
+    }
+  } catch (e) {}
 }
 
+// 登录提示按钮
 document.getElementById('laterLoginBtn').onclick = () => document.getElementById('loginPromptModal').classList.remove('show');
 document.getElementById('goLoginBtn').onclick = () => window.location.href = '/login';
 document.getElementById('continueBtn').onclick = () => { document.getElementById('modal').classList.remove('show'); initStudy(); };
