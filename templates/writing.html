@@ -44,7 +44,6 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  z-index: 10;
 }
 .title {
   font-size: 36px;
@@ -64,6 +63,7 @@ body {
   align-items: center;
   justify-content: center;
 }
+/* 上传按钮（加号）遮住列表容器右上角 */
 .upload-corner-btn {
   position: absolute;
   top: -16px;
@@ -289,7 +289,6 @@ function goBack() {
   else window.location.href = '/';
 }
 
-// ============ 核心函数：showList ============
 async function showList(type) {
   currentType = type;
   document.querySelectorAll('.card').forEach(c => c.style.display = 'none');
