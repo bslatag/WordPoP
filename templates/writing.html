@@ -284,8 +284,17 @@ fetch('/api/dictionary')
   .catch(() => {});
 
 async function apiFetch(url, options = {}) {
-  const res = await fetch(url, options);
-  return res.json();
+  try {
+    const res = await fetch(url, options);
+    if (!res.ok) {
+      console.error(`API ${url} 返回错误: ${res.status}`);
+      return [];
+    }
+    return await res.json();
+  } catch (err) {
+    console.error(`API ${url} 请求失败:`, err);
+    return [];
+  }
 }
 function showLoading(text) {
   const el = document.createElement('div');
@@ -333,8 +342,23 @@ async function refreshList(type) {
 function renderWordListDom(type, list) {
   const container = document.getElementById('listBox');
   const btn = document.getElementById('uploadBtn');
-  container.innerHTML = '';
-  container.appendChild(btn);
+
+  while (container.firstChild) {
+    if (container.firstChild === btn) {
+      if (container.childNodes.length > 1) {
+        container.removeChild(container.firstChild);
+      } else {
+        break;
+      }
+    } else {
+      container.removeChild(container.firstChild);
+    }
+  }
+  
+  if (!container.contains(btn)) {
+    container.appendChild(btn);
+  }
+  
   for (const w of list) {
     const item = document.createElement('div');
     item.className = 'word-item';
