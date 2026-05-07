@@ -31,12 +31,12 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: flex-start;  /* 整体靠上 */
-  padding-top: 100px;           /* 留出顶部返回和进度空间 */
+  justify-content: flex-start; 
+  padding-top: 100px;         
 }
 .progress {
   position: absolute;
-  top: 20px; left: 20px;
+  top: 50px; left: -20px;
   font-size: 20px;
   background: rgba(255,255,255,0.5);
   padding: 4px 12px;
@@ -44,7 +44,7 @@ body {
 }
 .back-btn {
   position: absolute;
-  top: 20px; right: 20px;
+  top: 50px; right: -20px;
   width: 44px; height: 44px;
   border-radius: 50%;
   background: var(--accent-pink);
@@ -66,6 +66,7 @@ body {
 }
 .input-box {
   flex: 1;
+  top：center；
   padding: 20px;
   font-size: 28px;
   font-family: 'Fredoka One', cursive;
@@ -73,10 +74,12 @@ body {
   border: 4px solid var(--border-color);
   border-radius: 16px;
   outline: none;
-  max-width: 400px;
+  max-width: 550px;
 }
 .speak-btn {
   background: transparent;
+  left：center；
+  bottom：80px；
   border: none;
   font-size: 42px;
   font-weight: bold;
@@ -98,7 +101,7 @@ body {
 }
 .confirm-btn {
   position: absolute;
-  bottom: 80px; right: 30px;   /* 不贴底，提高 */
+  bottom: 200px; right: -30px; 
   background: transparent;
   border: none;
   font-size: 50px;
