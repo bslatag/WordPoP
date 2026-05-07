@@ -99,7 +99,6 @@ def api_study_words():
     candidates = [{'单词': row['word'], '释义': row['meaning'], '音标': row['phonetic']}
                   for row in all_words if row['word'] not in learned]
     if len(candidates) < 30:
-        # 如果不足30个，用已学单词补足（避免空数组）
         all_available = db.execute("SELECT word, meaning, phonetic FROM dictionary ORDER BY RANDOM() LIMIT 50").fetchall()
         more = [{'单词': row['word'], '释义': row['meaning'], '音标': row['phonetic']}
                 for row in all_available if row['word'] not in [c['单词'] for c in candidates]]
@@ -174,6 +173,27 @@ def api_check_word():
         return jsonify({'valid': True, 'meaning': row['meaning']})
     return jsonify({'valid': False, 'meaning': ''})
 
+# ── 跳过单词（学习页用） ──
+@app.route('/api/skip-word', methods=['POST'])
+def api_skip_word():
+    user_id = get_current_user()
+    word = request.json.get('word', '').strip().lower()
+    db = get_db()
+    # 记录已跳过
+    db.execute("INSERT OR IGNORE INTO skipped_words (user_id, word) VALUES (?,?)", (user_id, word))
+    db.commit()
+    # 找一个新词：未学且未跳过
+    learned = set(row['word'] for row in db.execute("SELECT word FROM learned_words WHERE user_id = ?", (user_id,)).fetchall())
+    skipped = set(row['word'] for row in db.execute("SELECT word FROM skipped_words WHERE user_id = ?", (user_id,)).fetchall())
+    exclude = learned | skipped
+    all_words = db.execute("SELECT word, meaning, phonetic FROM dictionary ORDER BY RANDOM()").fetchall()
+    new_word = None
+    for row in all_words:
+        if row['word'] not in exclude:
+            new_word = {'单词': row['word'], '释义': row['meaning'], '音标': row['phonetic']}
+            break
+    return jsonify({'new_word': new_word})
+
 # ── OCR ──
 @app.route('/api/ocr', methods=['POST'])
 def api_ocr():
@@ -185,15 +205,12 @@ def api_ocr():
         img = Image.open(io.BytesIO(img_bytes)).convert('L')
     except Exception:
         return jsonify({'words': [], 'error': '图片无法解析'}), 400
-    # 压缩
     w, h = img.size
     max_size = 1200
     if w > max_size or h > max_size:
         img.thumbnail((max_size, max_size), Image.LANCZOS)
-    # 预处理
     img = img.filter(ImageFilter.SHARPEN)
     img = img.point(lambda x: 0 if x < 140 else 255)
-    # OCR
     try:
         text = pytesseract.image_to_string(img, lang='eng', config='--psm 6')
     except Exception as e:
@@ -207,5 +224,17 @@ def api_ocr():
 
 
 if __name__ == '__main__':
+    # 启动时确保 skipped_words 表存在
+    with app.app_context():
+        db = get_db()
+        db.execute("""
+            CREATE TABLE IF NOT EXISTS skipped_words (
+                user_id INTEGER,
+                word TEXT NOT NULL,
+                PRIMARY KEY (user_id, word),
+                FOREIGN KEY (user_id) REFERENCES users(id)
+            );
+        """)
+        db.commit()
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=False)
