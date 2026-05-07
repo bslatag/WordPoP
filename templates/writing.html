@@ -75,10 +75,15 @@ body {
   font-size: 32px;
   line-height: 1;
   cursor: pointer;
-  z-index: 30;
+  z-index: 22;
   display: none;
   align-items: center;
   justify-content: center;
+}
+.list-wrapper {
+  position: relative;
+  width: 100%;
+  max-width: 480px;  
 }
 .card {
   width: 100%;
@@ -95,9 +100,9 @@ body {
 .list-container {
   width: 100%;
   max-width: 480px;
-  height: 70vh;  
-  overflow-y: auto;
-  position: relative;   
+  height: 70vh; 
+  overflow-x: visible；
+  overflow-y: auto;   
   background: rgba(255,255,255,0.4);
   border: 3px solid var(--border-color);
   border-radius: 16px;
@@ -200,10 +205,10 @@ select { font-family: 'ZCOOL KuaiLe', cursive; }
   <div class="card" onclick="showList('learned')"><h2>已学单词</h2></div>
   <div class="card" onclick="showList('selfstudy')"><h2>默写自习室</h2></div>
 
- <div class="list-wrapper">
+<div class="list-wrapper">
   <div class="list-container" id="listBox"></div>
   <button class="upload-corner-btn" id="uploadBtn">＋</button>
- </div>
+</div>
 
   <div class="manual-add" id="manualAddBox">
     <input type="text" id="manualAddInput" placeholder="添加英文单词">
