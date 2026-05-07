@@ -31,7 +31,8 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;  /* 整体靠上 */
+  padding-top: 100px;           /* 留出顶部返回和进度空间 */
 }
 .progress {
   position: absolute;
@@ -88,17 +89,16 @@ body {
 .info {
   width: 100%;
   max-width: 400px;
-  padding-left: 52px;  /* 和左边喇叭按钮对齐，视觉上在输入框右下区域 */
   text-align: left;
   font-size: 24px;
   min-height: 36px;
   margin-bottom: 16px;
   color: var(--text-color);
-  transition: color 0.2s;
+  padding-left: 10px;  /* 左对齐，微调 */
 }
 .confirm-btn {
   position: absolute;
-  bottom: 30px; right: 30px;
+  bottom: 80px; right: 30px;   /* 不贴底，提高 */
   background: transparent;
   border: none;
   font-size: 50px;
@@ -123,17 +123,13 @@ body {
 </div>
 
 <script>
-// 从后端获取释义映射，避免依赖可能为空的localStorage
+// 从后端获取完整的词库释义映射，确保任何列表都能显示中文
 let wordMap = {};
-fetch('/api/study-words')
+fetch('/api/dictionary')
   .then(res => res.json())
-  .then(words => {
-    if (Array.isArray(words)) {
-      words.forEach(w => { wordMap[w.单词] = w.释义 || '暂无释义'; });
-    }
-    startPractice();
-  })
-  .catch(() => startPractice());
+  .then(dict => { wordMap = dict; })
+  .catch(() => {})
+  .finally(() => startPractice());
 
 const source = localStorage.getItem('current_practice');
 const wordList = JSON.parse(localStorage.getItem(`wordpop_${source}`) || '[]');
