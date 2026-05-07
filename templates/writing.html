@@ -120,89 +120,45 @@ body {
   justify-content: space-between;
   align-items: center;
 }
-.word-item .word-text {
-  display: flex;
-  flex-direction: column;
-}
-.word-item .meaning-text {
-  font-size: 14px;
-  color: #666;
-}
-.word-item .actions {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-.word-item .speak-small {
-  background: none;
-  border: none;
-  font-size: 20px;
-  cursor: pointer;
-}
+.word-item .word-text { display: flex; flex-direction: column; }
+.word-item .meaning-text { font-size: 14px; color: #666; }
+.word-item .actions { display: flex; gap: 8px; align-items: center; }
+.word-item .speak-small { background: none; border: none; font-size: 20px; cursor: pointer; }
 .word-item .del-btn {
-  background: var(--accent-pink);
-  color: white;
-  border: none;
-  width: 30px; height: 30px;
-  border-radius: 50%;
-  font-size: 16px;
-  cursor: pointer;
+  background: var(--accent-pink); color: white; border: none;
+  width: 30px; height: 30px; border-radius: 50%; font-size: 16px; cursor: pointer;
 }
-.star {
-  font-size: 22px;
-  color: var(--star-gold);
-  cursor: pointer;
-  transition: all 0.2s;
-}
+.star { font-size: 22px; color: var(--star-gold); cursor: pointer; transition: all 0.2s; }
 .star.active { color: var(--accent-pink); transform: scale(1.2); }
 .start-btn {
   padding: 14px 36px;
-  background: var(--accent-cyan);
-  border: 3px solid var(--border-color);
-  border-radius: 16px;
-  font-size: 22px;
-  color: var(--text-color);
-  cursor: pointer;
-  display: none;
+  background: var(--accent-cyan); border: 3px solid var(--border-color);
+  border-radius: 16px; font-size: 22px; color: var(--text-color); cursor: pointer; display: none;
 }
-.manual-add {
-  display: none;
-  align-items: center;
-  gap: 10px;
-  margin-top: 10px;
-  font-size: 20px;
-}
+.manual-add { display: none; align-items: center; gap: 10px; margin-top: 10px; font-size: 20px; }
 .manual-add input {
-  font-size: 20px; padding: 5px 10px;
-  border-radius: 8px; border: 2px solid var(--border-color);
-  font-family: 'Fredoka One', cursive;
-  width: 180px;
+  font-size: 20px; padding: 5px 10px; border-radius: 8px; border: 2px solid var(--border-color);
+  font-family: 'Fredoka One', cursive; width: 180px;
 }
 .manual-add button {
-  font-size: 20px; padding: 8px 16px;
-  border-radius: 8px; border: 2px solid var(--border-color);
-  background: var(--accent-cyan); color: var(--text-color);
-  cursor: pointer; font-family: 'ZCOOL KuaiLe', cursive;
+  font-size: 20px; padding: 8px 16px; border-radius: 8px; border: 2px solid var(--border-color);
+  background: var(--accent-cyan); color: var(--text-color); cursor: pointer; font-family: 'ZCOOL KuaiLe', cursive;
 }
 .modal {
   position: fixed; top: 0; left: 0; right: 0; bottom: 0;
   background: rgba(45,52,54,0.8); display: none;
-  align-items: center; justify-content: center; z-index: 999;
-  backdrop-filter: blur(5px);
+  align-items: center; justify-content: center; z-index: 999; backdrop-filter: blur(5px);
 }
 .modal.show { display: flex; }
 .modal-content {
-  background: white; border: 4px solid var(--border-color);
-  border-radius: 30px; padding: 40px; text-align: center;
-  box-shadow: 15px 15px 0 rgba(0,0,0,0.2);
-  max-width: 90%;
+  background: white; border: 4px solid var(--border-color); border-radius: 30px; padding: 40px;
+  text-align: center; box-shadow: 15px 15px 0 rgba(0,0,0,0.2); max-width: 90%;
 }
 .modal-content h3 { font-size: 28px; color: var(--text-color); margin-bottom: 20px; }
 .modal-btns { display: flex; gap: 20px; justify-content: center; margin-top: 20px; }
 .modal-btn {
-  padding: 15px 30px; border-radius: 15px;
-  border: 3px solid var(--border-color); font-size: 20px;
-  font-family: 'ZCOOL KuaiLe', cursive; cursor: pointer;
+  padding: 15px 30px; border-radius: 15px; border: 3px solid var(--border-color);
+  font-size: 20px; font-family: 'ZCOOL KuaiLe', cursive; cursor: pointer;
 }
 .modal-btn.primary { background: var(--accent-pink); color: white; }
 .modal-btn.secondary { background: var(--card-color); color: var(--text-color); }
@@ -273,6 +229,7 @@ body {
 
 <input type="file" id="fileInput" accept="image/*">
 
+<!-- Tesseract.js v5 -->
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script>
 let currentType = '';
@@ -290,10 +247,7 @@ async function apiFetch(url, options = {}) {
     const res = await fetch(url, options);
     if (!res.ok) return [];
     return await res.json();
-  } catch (err) {
-    console.error('API请求失败:', url, err);
-    return [];
-  }
+  } catch (err) { console.error(err); return []; }
 }
 
 function showLoading(text) {
@@ -337,36 +291,24 @@ async function showList(type) {
 async function refreshList(type) {
   const seq = ++fetchSeq;
   const data = await apiFetch(`/api/word-list/${type}`);
-  if (seq === fetchSeq) {
-    renderWordListDom(type, data || []);
-  }
+  if (seq === fetchSeq) renderWordListDom(type, data || []);
 }
 
 function renderWordListDom(type, list) {
   const container = document.getElementById('listBox');
   const btn = document.getElementById('uploadBtn');
-
-  // 移除除上传按钮外的所有子元素
   let child = container.firstChild;
   while (child) {
     const next = child.nextSibling;
-    if (child.id !== 'uploadBtn') {
-      container.removeChild(child);
-    }
+    if (child.id !== 'uploadBtn') container.removeChild(child);
     child = next;
   }
+  if (!container.contains(btn)) container.appendChild(btn);
 
-  // 确保上传按钮在容器内
-  if (!container.contains(btn)) {
-    container.appendChild(btn);
-  }
-
-  // 构建单词项
   const fragment = document.createDocumentFragment();
   for (const w of list) {
     const item = document.createElement('div');
     item.className = 'word-item';
-    // 兼容新旧数据格式：w 可能是对象 {word, meaning} 也可能是纯字符串
     const wordText = typeof w === 'object' ? w.word : w;
     const meaningText = typeof w === 'object' ? (w.meaning || globalDictionary[wordText] || '') : (globalDictionary[wordText] || '');
     const meaningHTML = meaningText ? `<span class="meaning-text">${meaningText}</span>` : '';
@@ -374,15 +316,8 @@ function renderWordListDom(type, list) {
     const starHTML = (type === 'starred') ? `<span class="star active" onclick="toggleStar('${wordText}')">★</span>` : '';
     const delHTML = (type === 'selfstudy') ? `<button class="del-btn" onclick="deleteWord('${wordText}')">✕</button>` : '';
     item.innerHTML = `
-      <div class="word-text">
-        <span>${wordText}</span>
-        ${meaningHTML}
-      </div>
-      <div class="actions">
-        ${starHTML}
-        ${speakBtnHTML}
-        ${delHTML}
-      </div>
+      <div class="word-text"><span>${wordText}</span>${meaningHTML}</div>
+      <div class="actions">${starHTML}${speakBtnHTML}${delHTML}</div>
     `;
     fragment.appendChild(item);
   }
@@ -408,14 +343,10 @@ async function toggleStar(word) {
 document.getElementById('manualAddBtn').onclick = async function() {
   const input = document.getElementById('manualAddInput');
   const word = input.value.trim();
-  if (!/^[a-zA-Z]{2,20}$/.test(word)) {
-    alert('请输入有效的英文单词（2~20个字母）');
-    return;
-  }
+  if (!/^[a-zA-Z]{2,20}$/.test(word)) { alert('请输入有效的英文单词（2~20个字母）'); return; }
   const checkRes = await apiFetch(`/api/check-word?word=${word}`);
   if (!checkRes.valid) {
-    const ok = confirm('该词不在词库中，可能拼写错误。确定添加吗？');
-    if (!ok) return;
+    if (!confirm('该词不在词库中，可能拼写错误。确定添加吗？')) return;
   }
   await apiFetch('/api/add-to-list', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({word}) });
   input.value = '';
@@ -426,101 +357,108 @@ document.getElementById('uploadBtn').onclick = function() {
   document.getElementById('fileInput').click();
 };
 
-// 前端 OCR + 后端识别
-(function() {
-  // OTSU 自适应二值化
-  function otsuBinarize(imageData) {
-    const data = imageData.data;
-    let histogram = new Array(256).fill(0);
-    for (let i = 0; i < data.length; i += 4) {
-      const gray = 0.299 * data[i] + 0.587 * data[i+1] + 0.114 * data[i+2];
-      histogram[Math.floor(gray)]++;
-      data[i] = data[i+1] = data[i+2] = gray;
-    }
-    let total = imageData.width * imageData.height;
-    let sum = 0;
-    for (let i = 0; i < 256; i++) sum += i * histogram[i];
-    let sumB = 0, wB = 0, wF = 0, maxVariance = 0, threshold = 128;
-    for (let i = 0; i < 256; i++) {
-      wB += histogram[i];
-      if (wB === 0) continue;
-      wF = total - wB;
-      if (wF === 0) break;
-      sumB += i * histogram[i];
-      const mB = sumB / wB;
-      const mF = (sum - sumB) / wF;
-      const variance = wB * wF * (mB - mF) * (mB - mF);
-      if (variance > maxVariance) {
-        maxVariance = variance;
-        threshold = i;
-      }
-    }
-    for (let i = 0; i < data.length; i += 4) {
-      const val = data[i] > threshold ? 255 : 0;
-      data[i] = data[i+1] = data[i+2] = val;
-    }
-    return imageData;
+// ---- OTSU 二值化 ----
+function otsuBinarize(imageData) {
+  const data = imageData.data;
+  let histogram = new Array(256).fill(0);
+  for (let i = 0; i < data.length; i += 4) {
+    const gray = 0.299 * data[i] + 0.587 * data[i+1] + 0.114 * data[i+2];
+    histogram[Math.floor(gray)]++;
+    data[i] = data[i+1] = data[i+2] = gray;
   }
+  let total = imageData.width * imageData.height;
+  let sum = 0;
+  for (let i = 0; i < 256; i++) sum += i * histogram[i];
+  let sumB = 0, wB = 0, wF = 0, maxVariance = 0, threshold = 128;
+  for (let i = 0; i < 256; i++) {
+    wB += histogram[i];
+    if (wB === 0) continue;
+    wF = total - wB;
+    if (wF === 0) break;
+    sumB += i * histogram[i];
+    const mB = sumB / wB;
+    const mF = (sum - sumB) / wF;
+    const variance = wB * wF * (mB - mF) * (mB - mF);
+    if (variance > maxVariance) { maxVariance = variance; threshold = i; }
+  }
+  for (let i = 0; i < data.length; i += 4) {
+    const val = data[i] > threshold ? 255 : 0;
+    data[i] = data[i+1] = data[i+2] = val;
+  }
+  return imageData;
+}
 
-  document.getElementById('fileInput').onchange = async function(e) {
-    const file = e.target.files[0];
-    if (!file) return;
-    this.value = '';
-    showLoading('识别中...');
-    try {
-      // 读取图片
-      const img = await new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = (ev) => {
-          const image = new Image();
-          image.onload = () => resolve(image);
-          image.onerror = reject;
-          image.src = ev.target.result;
-        };
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-      });
-      
-      // OTSU二值化
-      const canvas = document.createElement('canvas');
-      canvas.width = img.width;
-      canvas.height = img.height;
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(img, 0, 0);
-      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      otsuBinarize(imageData);
-      ctx.putImageData(imageData, 0, 0);
-      const processedDataUrl = canvas.toDataURL('image/png');
-      const blob = await (await fetch(processedDataUrl)).blob();
-      
-      const formData = new FormData();
-      formData.append('image', blob, 'clean.png');
-      const res = await fetch('/api/ocr', { method: 'POST', body: formData });
-      const recognitionResult = await res.json();
-      
-      if (recognitionResult.words && recognitionResult.words.length > 0) {
-        for (const item of recognitionResult.words) {
-          await apiFetch('/api/add-to-list', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({word: item.word}) });
+// ---- 前端识别 + 后端过滤 ----
+document.getElementById('fileInput').onchange = async function(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  this.value = '';
+  showLoading('识别中...');
+  try {
+    const img = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const image = new Image();
+        image.onload = () => resolve(image);
+        image.onerror = reject;
+        image.src = ev.target.result;
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+
+    const canvas = document.createElement('canvas');
+    canvas.width = img.width;
+    canvas.height = img.height;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0, 0);
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    otsuBinarize(imageData);
+    ctx.putImageData(imageData, 0, 0);
+    const processedDataUrl = canvas.toDataURL('image/png');
+
+    const worker = await Tesseract.createWorker('eng', 1, {
+      logger: m => {
+        if (m.status === 'recognizing text') {
+          showLoading(`识别中 ${Math.round(m.progress * 100)}%`);
         }
-        refreshList('selfstudy');
-        alert(`识别成功！共添加 ${recognitionResult.words.length} 个单词。`);
-      } else {
-        alert('未识别到有效单词（词库外的单词已过滤），可手动添加。');
       }
-    } catch (err) {
-      alert('识别失败，请重试');
-    } finally {
-      hideLoading();
+    });
+    const { data: { text } } = await worker.recognize(processedDataUrl, {
+      tessedit_pageseg_mode: '3',
+      tessedit_char_whitelist: 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
+    });
+    await worker.terminate();
+
+    const candidates = [...new Set((text.match(/[a-zA-Z]{2,20}/g) || []).map(w => w.toLowerCase()))];
+    if (candidates.length === 0) { alert('未识别到字母，请重拍'); return; }
+
+    // 批量校验
+    const validWords = [];
+    for (const w of candidates) {
+      const check = await apiFetch(`/api/check-word?word=${w}`);
+      if (check.valid) validWords.push(w);
     }
-  };
-})();
+
+    if (validWords.length > 0) {
+      for (const w of validWords) {
+        await apiFetch('/api/add-to-list', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({word: w}) });
+      }
+      refreshList('selfstudy');
+      alert(`成功添加 ${validWords.length} 个单词`);
+    } else {
+      alert('无有效单词（词库过滤）');
+    }
+  } catch (err) {
+    alert('识别失败，请重试');
+  } finally {
+    hideLoading();
+  }
+};
 
 document.getElementById('startBtn').onclick = async function() {
   const data = await apiFetch(`/api/word-list/${currentType}`);
-  if (data.length === 0) {
-    alert('单词列表为空，请先添加单词');
-    return;
-  }
+  if (data.length === 0) { alert('单词列表为空，请先添加单词'); return; }
   if (currentType === 'selfstudy') {
     document.getElementById('practiceModal').classList.add('show');
   } else {
@@ -530,11 +468,9 @@ document.getElementById('startBtn').onclick = async function() {
     window.location.href = '/writing/practice';
   }
 };
-
 document.getElementById('cancelPracticeBtn').onclick = function() {
   document.getElementById('practiceModal').classList.remove('show');
 };
-
 document.getElementById('confirmPracticeBtn').onclick = function() {
   const rounds = document.getElementById('modalRoundsSelect').value;
   const order = document.getElementById('modalOrderSelect').value;
