@@ -184,10 +184,8 @@ def api_skip_word():
     user_id = get_current_user()
     word = request.json.get('word', '').strip().lower()
     db = get_db()
-    # 记录已跳过
     db.execute("INSERT OR IGNORE INTO skipped_words (user_id, word) VALUES (?,?)", (user_id, word))
     db.commit()
-    # 找一个新词：未学且未跳过
     learned = set(row['word'] for row in db.execute("SELECT word FROM learned_words WHERE user_id = ?", (user_id,)).fetchall())
     skipped = set(row['word'] for row in db.execute("SELECT word FROM skipped_words WHERE user_id = ?", (user_id,)).fetchall())
     exclude = learned | skipped
@@ -206,14 +204,19 @@ def api_ocr():
     file = request.files['image']
     img_bytes = file.read()
     try:
-        # 直接打开前端处理好的清晰图片，只转灰度
         img = Image.open(io.BytesIO(img_bytes)).convert('L')
     except Exception:
         return jsonify({'words': [], 'error': '图片无法解析'}), 400
 
-    # 关键：不压缩，不缩放，不做任何额外处理，让Tesseract看最清晰的图
+    w, h = img.size
+    max_size = 1500
+    if w > max_size or h > max_size:
+        img.thumbnail((max_size, max_size), Image.LANCZOS)
+
+    img = img.filter(ImageFilter.SHARPEN)
+
     try:
-        text = pytesseract.image_to_string(img, lang='eng', config='--psm 6 -c tessedit_char_whitelist=abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ')
+        text = pytesseract.image_to_string(img, lang='eng', config='--psm 6')
     except Exception as e:
         return jsonify({'words': [], 'error': f'识别出错: {str(e)}'}), 500
 
