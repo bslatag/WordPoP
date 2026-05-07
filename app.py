@@ -148,9 +148,8 @@ def api_add_to_list():
     if not re.match(r'^[a-zA-Z]{2,20}$', word):
         return jsonify({'error': '无效单词格式'}), 400
     db = get_db()
-    row = db.execute("SELECT 1 FROM dictionary WHERE word = ?", (word,)).fetchone()
-    newly_added = False
-    if not row:
+    exists = db.execute("SELECT 1 FROM dictionary WHERE word = ?", (word,)).fetchone()
+    if not exists:
         meaning = ''
         try:
             resp = requests.get(f'https://dict.youdao.com/suggest?q={word}&le=eng', timeout=3)
@@ -159,18 +158,16 @@ def api_add_to_list():
                 entries = data['data']['entries']
                 if entries and entries[0].get('explain'):
                     meaning = entries[0]['explain']
-        except Exception:
+        except:
             pass
         if not meaning:
             meaning = '暂无释义'
         db.execute("INSERT OR IGNORE INTO dictionary (word, meaning) VALUES (?, ?)", (word, meaning))
         db.commit()
-        newly_added = True
 
     db.execute("INSERT OR IGNORE INTO selfstudy_words (user_id, word) VALUES (?,?)", (user_id, word))
     db.commit()
-    return jsonify({'status': 'ok', 'newly_added': newly_added})
-
+    return jsonify({'status': 'ok'})
 @app.route('/api/remove-from-list', methods=['POST'])
 def api_remove_from_list():
     user_id = get_current_user()
@@ -239,18 +236,35 @@ def api_ocr():
     except Exception:
         return jsonify({'words': [], 'error': '图片无法解析'}), 400
 
+    # 缩放
     w, h = img.size
     max_size = 1500
     if w > max_size or h > max_size:
         img.thumbnail((max_size, max_size), Image.LANCZOS)
 
+    # 轻度锐化
     img = img.filter(ImageFilter.SHARPEN)
 
+    # 识别，不限制字符
     try:
-        text = pytesseract.image_to_string(img, lang='eng', config='--psm 6')
+        text = pytesseract.image_to_string(img, lang='eng', config='--psm 3')
     except Exception as e:
         return jsonify({'words': [], 'error': f'识别出错: {str(e)}'}), 500
 
+    candidates = re.findall(r'[a-zA-Z]{2,20}', text.lower())
+    db = get_db()
+    rows = db.execute("SELECT word, meaning FROM dictionary").fetchall()
+    word_meaning_map = {row['word']: row['meaning'] for row in rows}
+    valid_words_set = set(word_meaning_map.keys())
+
+    seen = set()
+    result = []
+    for w in candidates:
+        if w in valid_words_set and w not in seen:
+            seen.add(w)
+            result.append({'word': w, 'meaning': word_meaning_map.get(w, '暂无释义')})
+
+    return jsonify({'words': result, 'raw_count': len(candidates), 'filtered_count': len(result)})
     candidates = re.findall(r'[a-zA-Z]{2,20}', text.lower())
     db = get_db()
     rows = db.execute("SELECT word, meaning FROM dictionary").fetchall()
