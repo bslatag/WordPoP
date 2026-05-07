@@ -130,7 +130,7 @@ def api_word_list(list_type):
         return jsonify([])
     rows = db.execute(f"SELECT word FROM {table} WHERE user_id = ?", (user_id,)).fetchall()
     words = [row['word'] for row in rows]
-    # 为每个单词附加释义
+
     meaning_map = {}
     if words:
         placeholders = ','.join(['?' for _ in words])
