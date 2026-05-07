@@ -283,19 +283,18 @@ fetch('/api/dictionary')
   .then(dict => { globalDictionary = dict; })
   .catch(() => {});
 
+// ✅ 容错 apiFetch
 async function apiFetch(url, options = {}) {
   try {
     const res = await fetch(url, options);
-    if (!res.ok) {
-      console.error(`API ${url} 返回错误: ${res.status}`);
-      return [];
-    }
+    if (!res.ok) return [];
     return await res.json();
   } catch (err) {
-    console.error(`API ${url} 请求失败:`, err);
+    console.error('API请求失败:', url, err);
     return [];
   }
 }
+
 function showLoading(text) {
   const el = document.createElement('div');
   el.id = '__loading__';
@@ -317,6 +316,7 @@ function showCards() {
   currentView = 'cards';
   document.getElementById('backBtn').onclick = () => { window.location.href = '/'; };
 }
+
 function goBack() {
   if (currentView === 'list') showCards();
   else window.location.href = '/';
@@ -339,26 +339,27 @@ async function refreshList(type) {
   renderWordListDom(type, data || []);
 }
 
+// ✅ 修复：不清除上传按钮
 function renderWordListDom(type, list) {
   const container = document.getElementById('listBox');
   const btn = document.getElementById('uploadBtn');
 
-  while (container.firstChild) {
-    if (container.firstChild === btn) {
-      if (container.childNodes.length > 1) {
-        container.removeChild(container.firstChild);
-      } else {
-        break;
-      }
-    } else {
-      container.removeChild(container.firstChild);
+  // 移除所有单词项（保留上传按钮）
+  let child = container.firstChild;
+  while (child) {
+    const next = child.nextSibling;
+    if (child.id !== 'uploadBtn') {
+      container.removeChild(child);
     }
+    child = next;
   }
-  
+
+  // 确保上传按钮在容器内（首次渲染）
   if (!container.contains(btn)) {
     container.appendChild(btn);
   }
-  
+
+  // 创建单词条目
   for (const w of list) {
     const item = document.createElement('div');
     item.className = 'word-item';
@@ -396,6 +397,7 @@ async function deleteWord(word) {
   await apiFetch('/api/remove-from-list', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({word}) });
   refreshList('selfstudy');
 }
+
 async function toggleStar(word) {
   await apiFetch('/api/toggle-star', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({word}) });
   refreshList(currentType);
@@ -422,14 +424,13 @@ document.getElementById('uploadBtn').onclick = function() {
   document.getElementById('fileInput').click();
 };
 
-// 前端预处理 + 后端识别
+// OCR上传处理（保持不变，仅调整容错）
 document.getElementById('fileInput').onchange = async function(e) {
   const file = e.target.files[0];
   if (!file) return;
   this.value = '';
   showLoading('识别中...');
   try {
-    // 1. 读取图片
     const img = await new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = (ev) => {
@@ -442,7 +443,6 @@ document.getElementById('fileInput').onchange = async function(e) {
       reader.readAsDataURL(file);
     });
     
-    // 2. 前端预处理：灰度+自适应二值化（类似扫描件效果）
     const canvas = document.createElement('canvas');
     canvas.width = img.width;
     canvas.height = img.height;
@@ -452,24 +452,20 @@ document.getElementById('fileInput').onchange = async function(e) {
     const data = imageData.data;
     for (let i = 0; i < data.length; i += 4) {
       const gray = 0.299 * data[i] + 0.587 * data[i+1] + 0.114 * data[i+2];
-      // 简单二值化：灰度>128为纯白，否则纯黑
       const value = gray > 128 ? 255 : 0;
       data[i] = data[i+1] = data[i+2] = value;
     }
     ctx.putImageData(imageData, 0, 0);
     const processedDataUrl = canvas.toDataURL('image/png');
-    
-    // 3. 将预处理后的图片转为Blob
     const blob = await (await fetch(processedDataUrl)).blob();
     
-    // 4. 上传给后端识别
     const formData = new FormData();
     formData.append('image', blob, 'clean.png');
     const res = await fetch('/api/ocr', { method: 'POST', body: formData });
-    const data = await res.json();
+    const recognitionResult = await res.json();
     
-    if (data.words && data.words.length > 0) {
-      for (const item of data.words) {
+    if (recognitionResult.words && recognitionResult.words.length > 0) {
+      for (const item of recognitionResult.words) {
         await apiFetch('/api/add-to-list', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({word: item.word}) });
       }
       refreshList('selfstudy');
@@ -498,6 +494,7 @@ document.getElementById('startBtn').onclick = async function() {
     window.location.href = '/writing/practice';
   }
 };
+
 document.getElementById('cancelPracticeBtn').onclick = function() {
   document.getElementById('practiceModal').classList.remove('show');
 };
