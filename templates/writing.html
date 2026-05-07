@@ -63,13 +63,11 @@ body {
   align-items: center;
   justify-content: center;
 }
-/* 列表外层容器，用于定位上传按钮 */
 .list-wrapper {
   position: relative;
   width: 100%;
   max-width: 480px;
 }
-/* 上传按钮（加号）位于列表框外部右上角，完整露出，不遮角 */
 .upload-corner-btn {
   position: absolute;
   top: -16px;
@@ -140,7 +138,6 @@ body {
   border: none;
   font-size: 20px;
   cursor: pointer;
-  padding: 2px 4px;
 }
 .word-item .del-btn {
   background: var(--accent-pink);
@@ -223,7 +220,6 @@ body {
   <div class="card" onclick="showList('learned')"><h2>已学单词</h2></div>
   <div class="card" onclick="showList('selfstudy')"><h2>默写自习室</h2></div>
 
-  <!-- list-wrapper 包裹列表容器和上传按钮 -->
   <div class="list-wrapper">
     <div class="list-container" id="listBox"></div>
     <button class="upload-corner-btn" id="uploadBtn" title="添加单词（拍照/图库）">＋</button>
@@ -277,19 +273,17 @@ body {
 
 <input type="file" id="fileInput" accept="image/*">
 
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script>
 let currentType = '';
 let currentView = 'cards';
-// 全局词典（用于展示释义）
 let globalDictionary = {};
 
-// 加载词典
 fetch('/api/dictionary')
   .then(res => res.json())
   .then(dict => { globalDictionary = dict; })
   .catch(() => {});
 
-// ============ 工具 ============
 async function apiFetch(url, options = {}) {
   const res = await fetch(url, options);
   return res.json();
@@ -306,7 +300,6 @@ function hideLoading() {
   if (el) el.remove();
 }
 
-// ============ 导航 ============
 function showCards() {
   document.querySelectorAll('.card').forEach(c => c.style.display = 'block');
   document.getElementById('listBox').style.display = 'none';
@@ -369,7 +362,6 @@ function renderWordListDom(type, list) {
   }
 }
 
-// 朗读单词
 function speakWord(word) {
   if (!word) return;
   const u = new SpeechSynthesisUtterance(word);
@@ -386,7 +378,6 @@ async function toggleStar(word) {
   refreshList(currentType);
 }
 
-// ============ 手动添加 ============
 document.getElementById('manualAddBtn').onclick = async function() {
   const input = document.getElementById('manualAddInput');
   const word = input.value.trim();
@@ -404,37 +395,80 @@ document.getElementById('manualAddBtn').onclick = async function() {
   refreshList('selfstudy');
 };
 
-// ============ 上传按钮（＋）拍照/图库统一识别 ============
 document.getElementById('uploadBtn').onclick = function() {
   document.getElementById('fileInput').click();
 };
 
+// 前端 OCR 识别（Tesseract.js v5）
 document.getElementById('fileInput').onchange = async function(e) {
   const file = e.target.files[0];
   if (!file) return;
   this.value = '';
   showLoading('识别中...');
   try {
-    const formData = new FormData();
-    formData.append('image', file);
-    const res = await fetch('/api/ocr', { method: 'POST', body: formData });
-    const data = await res.json();
-    if (data.words && data.words.length > 0) {
-      for (const item of data.words) {
-        await apiFetch('/api/add-to-list', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({word: item.word}) });
+    // 简单灰度预处理：将图片绘制到 canvas 上再取回，不做二值化（防止白化）
+    const img = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const image = new Image();
+        image.onload = () => resolve(image);
+        image.onerror = reject;
+        image.src = ev.target.result;
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+    const canvas = document.createElement('canvas');
+    canvas.width = img.width;
+    canvas.height = img.height;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0, 0);
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const data = imageData.data;
+    for (let i = 0; i < data.length; i += 4) {
+      // 灰度化
+      const gray = 0.299 * data[i] + 0.587 * data[i+1] + 0.114 * data[i+2];
+      data[i] = data[i+1] = data[i+2] = gray;
+    }
+    ctx.putImageData(imageData, 0, 0);
+    const processedDataUrl = canvas.toDataURL();
+
+    const worker = await Tesseract.createWorker('eng', 1, {
+      logger: m => {
+        if (m.status === 'recognizing text') {
+          showLoading(`识别中 ${Math.round(m.progress * 100)}%`);
+        }
+      }
+    });
+    const { data: { text } } = await worker.recognize(processedDataUrl, {
+      tessedit_pageseg_mode: '6',
+      tessedit_char_whitelist: 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
+    });
+    await worker.terminate();
+
+    const candidates = (text.match(/[a-zA-Z]{2,20}/g) || []).map(w => w.toLowerCase());
+    // 用后端词典过滤
+    const checkResults = await Promise.all(candidates.map(async w => {
+      const res = await apiFetch(`/api/check-word?word=${w}`);
+      return res.valid ? w : null;
+    }));
+    const validWords = [...new Set(checkResults.filter(Boolean))];
+
+    if (validWords.length === 0) {
+      alert('未识别到有效单词（词库外的单词已过滤），可手动添加。');
+    } else {
+      for (const w of validWords) {
+        await apiFetch('/api/add-to-list', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({word: w}) });
       }
       refreshList('selfstudy');
-    } else {
-      alert('未识别到有效单词（词库外的单词已过滤），可手动添加。');
     }
   } catch (err) {
-    alert('识别请求失败，请检查网络');
+    alert('识别失败，请重试');
   } finally {
     hideLoading();
   }
 };
 
-// ============ 开始默写 ============
 document.getElementById('startBtn').onclick = async function() {
   const data = await apiFetch(`/api/word-list/${currentType}`);
   if (data.length === 0) {
@@ -462,11 +496,9 @@ document.getElementById('confirmPracticeBtn').onclick = function() {
   window.location.href = '/writing/practice';
 };
 
-// 登录提示按钮
 document.getElementById('laterLoginBtn').onclick = () => document.getElementById('loginPromptModal').classList.remove('show');
 document.getElementById('goLoginBtn').onclick = () => window.location.href = '/login';
 
-// 初始化
 showCards();
 </script>
 </body>
