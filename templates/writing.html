@@ -63,6 +63,13 @@ body {
   align-items: center;
   justify-content: center;
 }
+/* 列表外层容器，用于定位上传按钮 */
+.list-wrapper {
+  position: relative;
+  width: 100%;
+  max-width: 480px;
+}
+/* 上传按钮（加号）位于列表框外部右上角，完整露出，不遮角 */
 .upload-corner-btn {
   position: absolute;
   top: -16px;
@@ -75,15 +82,10 @@ body {
   font-size: 32px;
   line-height: 1;
   cursor: pointer;
-  z-index: 22;
+  z-index: 30;
   display: none;
   align-items: center;
   justify-content: center;
-}
-.list-wrapper {
-  position: relative;
-  width: 100%;
-  max-width: 480px;  
 }
 .card {
   width: 100%;
@@ -100,14 +102,12 @@ body {
 .list-container {
   width: 100%;
   max-width: 480px;
-  height: 70vh; 
-  overflow-x: visible；
-  overflow-y: auto;   
+  height: 70vh;
+  overflow-y: auto;
   background: rgba(255,255,255,0.4);
   border: 3px solid var(--border-color);
   border-radius: 16px;
   padding: 16px;
-  position: relative;
   display: none;
 }
 .word-item {
@@ -122,6 +122,26 @@ body {
   justify-content: space-between;
   align-items: center;
 }
+.word-item .word-text {
+  display: flex;
+  flex-direction: column;
+}
+.word-item .meaning-text {
+  font-size: 14px;
+  color: #666;
+}
+.word-item .actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.word-item .speak-small {
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  padding: 2px 4px;
+}
 .word-item .del-btn {
   background: var(--accent-pink);
   color: white;
@@ -130,7 +150,6 @@ body {
   border-radius: 50%;
   font-size: 16px;
   cursor: pointer;
-  margin-left: 10px;
 }
 .star {
   font-size: 22px;
@@ -190,7 +209,6 @@ body {
 }
 .modal-btn.primary { background: var(--accent-pink); color: white; }
 .modal-btn.secondary { background: var(--card-color); color: var(--text-color); }
-select { font-family: 'ZCOOL KuaiLe', cursive; }
 #fileInput { display: none; }
 </style>
 </head>
@@ -205,10 +223,11 @@ select { font-family: 'ZCOOL KuaiLe', cursive; }
   <div class="card" onclick="showList('learned')"><h2>已学单词</h2></div>
   <div class="card" onclick="showList('selfstudy')"><h2>默写自习室</h2></div>
 
-<div class="list-wrapper">
-  <div class="list-container" id="listBox"></div>
-  <button class="upload-corner-btn" id="uploadBtn">＋</button>
-</div>
+  <!-- list-wrapper 包裹列表容器和上传按钮 -->
+  <div class="list-wrapper">
+    <div class="list-container" id="listBox"></div>
+    <button class="upload-corner-btn" id="uploadBtn" title="添加单词（拍照/图库）">＋</button>
+  </div>
 
   <div class="manual-add" id="manualAddBox">
     <input type="text" id="manualAddInput" placeholder="添加英文单词">
@@ -222,7 +241,7 @@ select { font-family: 'ZCOOL KuaiLe', cursive; }
 <div class="modal" id="practiceModal">
   <div class="modal-content">
     <h3>默写设置</h3>
-    <div style="margin: 10px 0;">
+    <div style="margin:10px 0;">
       <label>轮默次数：</label>
       <select id="modalRoundsSelect">
         <option value="1">1</option><option value="2">2</option>
@@ -230,7 +249,7 @@ select { font-family: 'ZCOOL KuaiLe', cursive; }
         <option value="4">4</option><option value="5">5</option>
       </select>
     </div>
-    <div style="margin: 10px 0;">
+    <div style="margin:10px 0;">
       <label>默写顺序：</label>
       <select id="modalOrderSelect">
         <option value="random">随机</option>
@@ -261,6 +280,14 @@ select { font-family: 'ZCOOL KuaiLe', cursive; }
 <script>
 let currentType = '';
 let currentView = 'cards';
+// 全局词典（用于展示释义）
+let globalDictionary = {};
+
+// 加载词典
+fetch('/api/dictionary')
+  .then(res => res.json())
+  .then(dict => { globalDictionary = dict; })
+  .catch(() => {});
 
 // ============ 工具 ============
 async function apiFetch(url, options = {}) {
@@ -319,15 +346,35 @@ function renderWordListDom(type, list) {
   for (const w of list) {
     const item = document.createElement('div');
     item.className = 'word-item';
+    let meaningText = '';
+    if (type === 'selfstudy') {
+      meaningText = globalDictionary[w] || '';
+    }
+    const meaningHTML = meaningText ? `<span class="meaning-text">${meaningText}</span>` : '';
+    const speakBtnHTML = (type === 'selfstudy') ? `<button class="speak-small" onclick="speakWord('${w}')">🔊</button>` : '';
+    const starHTML = (type === 'starred') ? `<span class="star active" onclick="toggleStar('${w}')">★</span>` : '';
+    const delHTML = (type === 'selfstudy') ? `<button class="del-btn" onclick="deleteWord('${w}')">✕</button>` : '';
     item.innerHTML = `
-      <span>${w}</span>
-      <div style="display:flex; align-items:center; gap:5px;">
-        ${type === 'starred' ? `<span class="star active" onclick="toggleStar('${w}')">★</span>` : ''}
-        ${type === 'selfstudy' ? `<button class="del-btn" onclick="deleteWord('${w}')">✕</button>` : ''}
+      <div class="word-text">
+        <span>${w}</span>
+        ${meaningHTML}
+      </div>
+      <div class="actions">
+        ${starHTML}
+        ${speakBtnHTML}
+        ${delHTML}
       </div>
     `;
     container.appendChild(item);
   }
+}
+
+// 朗读单词
+function speakWord(word) {
+  if (!word) return;
+  const u = new SpeechSynthesisUtterance(word);
+  u.lang = 'en-US';
+  speechSynthesis.speak(u);
 }
 
 async function deleteWord(word) {
@@ -357,7 +404,7 @@ document.getElementById('manualAddBtn').onclick = async function() {
   refreshList('selfstudy');
 };
 
-// ============ 上传按钮（＋） ============
+// ============ 上传按钮（＋）拍照/图库统一识别 ============
 document.getElementById('uploadBtn').onclick = function() {
   document.getElementById('fileInput').click();
 };
@@ -373,8 +420,8 @@ document.getElementById('fileInput').onchange = async function(e) {
     const res = await fetch('/api/ocr', { method: 'POST', body: formData });
     const data = await res.json();
     if (data.words && data.words.length > 0) {
-      for (const w of data.words) {
-        await apiFetch('/api/add-to-list', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({word: w}) });
+      for (const item of data.words) {
+        await apiFetch('/api/add-to-list', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({word: item.word}) });
       }
       refreshList('selfstudy');
     } else {
