@@ -310,9 +310,7 @@ body {
 let currentGroup = [];
 let index = 0;
 
-// ========== 发音（拖动选口音，修复 iOS Safari 二次触发） ==========
-let didDrag = false;
-
+// ========== 发音（纯拖拽，点击不发声） ==========
 function speak(lang) {
   const text = document.getElementById('word').textContent;
   if (!text) return;
@@ -320,7 +318,6 @@ function speak(lang) {
   const u = new SpeechSynthesisUtterance(text);
   u.lang = lang;
   u.rate = 0.9;
-  // 直接播放，不通过 setTimeout，满足 iOS 同步用户手势要求
   window.speechSynthesis.speak(u);
 
   const tip = document.getElementById('voiceTip');
@@ -329,74 +326,68 @@ function speak(lang) {
   setTimeout(() => tip.classList.remove('show'), 1200);
 }
 
-// 拖动逻辑
 const speakBtn = document.getElementById('speakBtn');
 let startY = 0;
+let hasMoved = false;   // 区分拖拽与点击
 
-speakBtn.addEventListener('mousedown', e => {
+speakBtn.addEventListener('mousedown', (e) => {
   startY = e.clientY;
-  didDrag = false;
+  hasMoved = false;
   speakBtn.style.transition = 'none';
   e.preventDefault();
 });
 
-document.addEventListener('mousemove', e => {
+document.addEventListener('mousemove', (e) => {
   if (!startY) return;
   let dy = e.clientY - startY;
-  if (Math.abs(dy) > 10) didDrag = true;  // 移动超过10px认为是要拖动
+  if (Math.abs(dy) > 5) hasMoved = true;
   dy = Math.max(-80, Math.min(80, dy));
   speakBtn.style.transform = `translateY(-50%) translateY(${dy}px)`;
 });
 
-document.addEventListener('mouseup', e => {
+document.addEventListener('mouseup', (e) => {
   if (!startY) return;
   const dy = e.clientY - startY;
   startY = 0;
   speakBtn.style.transition = 'transform 0.3s ease';
   speakBtn.style.transform = 'translateY(-50%)';
-  if (dy < -30) {
-    speak('en-GB');
-  } else if (dy > 30) {
-    speak('en-US');
+
+  if (hasMoved) {
+    if (dy < -20) speak('en-GB');
+    else if (dy > 20) speak('en-US');
   }
+  // 纯点击无反应，符合设计
+  hasMoved = false;
 });
 
-speakBtn.addEventListener('touchstart', e => {
+speakBtn.addEventListener('touchstart', (e) => {
   startY = e.changedTouches[0].clientY;
-  didDrag = false;
+  hasMoved = false;
   speakBtn.style.transition = 'none';
 });
 
-document.addEventListener('touchmove', e => {
+document.addEventListener('touchmove', (e) => {
   if (!startY) return;
   let dy = e.changedTouches[0].clientY - startY;
-  if (Math.abs(dy) > 10) didDrag = true;   // 移动超过10px认为是要拖动
+  if (Math.abs(dy) > 5) hasMoved = true;
   dy = Math.max(-80, Math.min(80, dy));
   speakBtn.style.transform = `translateY(-50%) translateY(${dy}px)`;
   e.preventDefault();
 });
 
-speakBtn.addEventListener('touchend', e => {
+speakBtn.addEventListener('touchend', (e) => {
   if (!startY) return;
   const dy = e.changedTouches[0].clientY - startY;
   startY = 0;
-  didDrag = false;   // 注意：先重置标记，再播放
   speakBtn.style.transition = 'transform 0.3s ease';
   speakBtn.style.transform = 'translateY(-50%)';
-  if (dy < -30) {
-    speak('en-GB');
-  } else if (dy > 30) {
-    speak('en-US');
-  }
-});
 
-speakBtn.addEventListener('click', (e) => {
-  // 如果刚才发生了拖动，则不触发 click 发音
-  // 通过判断最后一次 mouseup/touchend 的时间和位移来决定
-  // 简化处理：如果 startY 不为 0，说明还在拖动中，不播放
-  if (startY === 0) {
-    speak('en-US');
+  if (hasMoved) {
+    if (dy < -20) speak('en-GB');
+    else if (dy > 20) speak('en-US');
   }
+  hasMoved = false;
+  e.preventDefault(); // 阻止 Safari 模拟的 click
 });
 
 // ========== 左右滑动切词 ==========
@@ -575,11 +566,6 @@ async function initStudy() {
       else sb.classList.remove('active');
     }
   } catch (e) {}
-
-  // 静默激活 iOS 语音引擎（不影响后续发音）
-  const dummy = new SpeechSynthesisUtterance('');
-  dummy.volume = 0;
-  window.speechSynthesis.speak(dummy);
 }
 
 // 登录提示按钮
