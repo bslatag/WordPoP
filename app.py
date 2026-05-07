@@ -179,7 +179,6 @@ def api_dictionary():
     rows = db.execute("SELECT word, meaning FROM dictionary").fetchall()
     return jsonify({row['word']: row['meaning'] for row in rows})
 
-# ── 跳过单词（学习页用） ──
 @app.route('/api/skip-word', methods=['POST'])
 def api_skip_word():
     user_id = get_current_user()
@@ -200,7 +199,6 @@ def api_skip_word():
             break
     return jsonify({'new_word': new_word})
 
-# ── OCR（优化版，印刷体识别率 > 90%）──
 @app.route('/api/ocr', methods=['POST'])
 def api_ocr():
     if 'image' not in request.files:
@@ -212,31 +210,24 @@ def api_ocr():
     except Exception:
         return jsonify({'words': [], 'error': '图片无法解析'}), 400
 
-    # 缩放至合理尺寸，加快识别
     w, h = img.size
     max_size = 1500
     if w > max_size or h > max_size:
         img.thumbnail((max_size, max_size), Image.LANCZOS)
 
-    # 预处理：锐化 + 自适应二值化
     img = img.filter(ImageFilter.SHARPEN)
-    # 使用自适应阈值，保留细节
-    img = img.point(lambda x: 0 if x < 128 else 255)
 
     try:
-        # PSM 6 适合均匀文本块，白名单只识别字母
-        text = pytesseract.image_to_string(img, lang='eng', config='--psm 6 -c tessedit_char_whitelist=abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ')
+        text = pytesseract.image_to_string(img, lang='eng', config='--psm 3 -c tessedit_char_whitelist=abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ')
     except Exception as e:
         return jsonify({'words': [], 'error': f'识别出错: {str(e)}'}), 500
 
     candidates = re.findall(r'[a-zA-Z]{2,20}', text.lower())
     db = get_db()
-    # 获取词库及释义
     rows = db.execute("SELECT word, meaning FROM dictionary").fetchall()
     word_meaning_map = {row['word']: row['meaning'] for row in rows}
     valid_words_set = set(word_meaning_map.keys())
 
-    # 过滤并构建带释义的结果
     seen = set()
     result = []
     for w in candidates:
@@ -246,9 +237,7 @@ def api_ocr():
 
     return jsonify({'words': result, 'raw_count': len(candidates), 'filtered_count': len(result)})
 
-
 if __name__ == '__main__':
-    # 启动时确保 skipped_words 表存在
     with app.app_context():
         db = get_db()
         db.execute("""
