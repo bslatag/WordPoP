@@ -120,12 +120,26 @@ def api_mark_learned():
 def api_word_list(list_type):
     user_id = get_current_user()
     db = get_db()
-    table_map = {'learned': 'learned_words', 'starred': 'starred_words', 'selfstudy': 'selfstudy_words'}
+    table_map = {
+        'learned': 'learned_words',
+        'starred': 'starred_words',
+        'selfstudy': 'selfstudy_words'
+    }
     table = table_map.get(list_type)
     if not table:
         return jsonify([])
     rows = db.execute(f"SELECT word FROM {table} WHERE user_id = ?", (user_id,)).fetchall()
-    return jsonify([row['word'] for row in rows])
+    words = [row['word'] for row in rows]
+    # 为每个单词附加释义
+    meaning_map = {}
+    if words:
+        placeholders = ','.join(['?' for _ in words])
+        query = f"SELECT word, meaning FROM dictionary WHERE word IN ({placeholders})"
+        meanings = db.execute(query, words).fetchall()
+        for m in meanings:
+            meaning_map[m['word']] = m['meaning'] or '暂无释义'
+    result = [{'word': w, 'meaning': meaning_map.get(w, '暂无释义')} for w in words]
+    return jsonify(result)
 
 @app.route('/api/add-to-list', methods=['POST'])
 def api_add_to_list():
