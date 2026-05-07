@@ -173,6 +173,12 @@ def api_check_word():
         return jsonify({'valid': True, 'meaning': row['meaning']})
     return jsonify({'valid': False, 'meaning': ''})
 
+@app.route('/api/dictionary')
+def api_dictionary():
+    db = get_db()
+    rows = db.execute("SELECT word, meaning FROM dictionary").fetchall()
+    return jsonify({row['word']: row['meaning'] for row in rows})
+
 # ── 跳过单词（学习页用） ──
 @app.route('/api/skip-word', methods=['POST'])
 def api_skip_word():
