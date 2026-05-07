@@ -33,7 +33,6 @@ body {
   align-items: center;
   justify-content: center;
 }
-/* 左上角进度 */
 .progress {
   position: absolute;
   top: 20px; left: 20px;
@@ -42,7 +41,6 @@ body {
   padding: 4px 12px;
   border-radius: 10px;
 }
-/* 退出按钮 - 右上角 */
 .back-btn {
   position: absolute;
   top: 20px; right: 20px;
@@ -57,7 +55,6 @@ body {
   align-items: center;
   justify-content: center;
 }
-/* 输入行：喇叭 + 输入框 */
 .input-area {
   display: flex;
   align-items: center;
@@ -88,19 +85,17 @@ body {
   font-family: 'ZCOOL KuaiLe', cursive;
   line-height: 1;
 }
-/* 信息区：释义/正误提示，位于输入框右下角，左对齐 */
 .info {
   width: 100%;
   max-width: 400px;
+  padding-left: 52px;  /* 和左边喇叭按钮对齐，视觉上在输入框右下区域 */
   text-align: left;
   font-size: 24px;
   min-height: 36px;
   margin-bottom: 16px;
   color: var(--text-color);
-  padding-left: 42px; /* 给左侧喇叭留空，保持与输入框对齐 */
   transition: color 0.2s;
 }
-/* 确认按钮 - 右下角，与退出按钮同一竖直线 */
 .confirm-btn {
   position: absolute;
   bottom: 30px; right: 30px;
@@ -128,10 +123,17 @@ body {
 </div>
 
 <script>
-// 从后端获取释义映射，不依赖localStorage
-const allWordsPromise = fetch('/api/study-words?all=1')  // 后端需要支持返回全部词库，如添加参数或新增接口
-  .catch(() => fetch('/api/word-list/learned'))  // 兜底方案，确保不会崩溃
-  .then(res => res.ok ? res.json() : []);
+// 从后端获取释义映射，避免依赖可能为空的localStorage
+let wordMap = {};
+fetch('/api/study-words')
+  .then(res => res.json())
+  .then(words => {
+    if (Array.isArray(words)) {
+      words.forEach(w => { wordMap[w.单词] = w.释义 || '暂无释义'; });
+    }
+    startPractice();
+  })
+  .catch(() => startPractice());
 
 const source = localStorage.getItem('current_practice');
 const wordList = JSON.parse(localStorage.getItem(`wordpop_${source}`) || '[]');
@@ -147,23 +149,8 @@ const wordProgress = {};
 let current = null;
 let answerShown = false;
 let infoTimer = null;
-let wordMap = {};
-
 const infoEl = document.getElementById('info');
 const inputBox = document.getElementById('inputBox');
-
-// 初始化释义映射
-allWordsPromise.then(words => {
-  if (Array.isArray(words)) {
-    words.forEach(w => { wordMap[w.单词] = w.释义 || '暂无释义'; });
-  }
-  if (wordList.length === 0) {
-    infoEl.innerText = "暂无单词";
-    inputBox.disabled = true;
-  } else {
-    randWord();
-  }
-});
 
 function showInfo(text, color) {
   if (infoTimer) clearTimeout(infoTimer);
@@ -173,8 +160,7 @@ function showInfo(text, color) {
 
 function showMeaning() {
   if (!current) return;
-  const meaning = wordMap[current] || '暂无释义';
-  infoEl.innerText = meaning;
+  infoEl.innerText = wordMap[current] || '暂无释义';
   infoEl.style.color = '#0D2A5A';
 }
 
@@ -199,7 +185,7 @@ function getNextWord() {
 function randWord() {
   const next = getNextWord();
   if (!next) {
-    infoEl.innerText = "🎉 全部完成！";
+    infoEl.innerText = '🎉 全部完成！';
     inputBox.disabled = true;
     document.getElementById('progress').innerText = `共 ${wordList.length} 词`;
     return;
@@ -215,7 +201,6 @@ function randWord() {
 
 function check() {
   if (!current) return;
-
   const val = inputBox.value.trim().toLowerCase();
   const ans = current.toLowerCase();
   const prog = wordProgress[current];
@@ -249,16 +234,22 @@ function check() {
   }
 
   inputBox.value = '';
-
   if (val === ans && !answerShown) {
     setTimeout(randWord, 1000);
   }
 }
 
+function startPractice() {
+  if (wordList.length === 0) {
+    infoEl.innerText = '暂无单词';
+    inputBox.disabled = true;
+  } else {
+    randWord();
+  }
+}
+
 document.getElementById('confirmBtn').onclick = check;
-inputBox.addEventListener('keydown', e => {
-  if (e.key === 'Enter') check();
-});
+inputBox.addEventListener('keydown', e => { if (e.key === 'Enter') check(); });
 
 document.getElementById('speakBtn').onclick = () => {
   if (!current) return;
