@@ -34,7 +34,6 @@ body {
   justify-content: center;
   gap: 16px;
 }
-/* 进度：无背景框，微软雅黑 */
 .progress {
   position: absolute;
   top: 50px; left: 20px;
@@ -44,7 +43,6 @@ body {
   background: none;
   padding: 0;
 }
-/* 退出按钮 */
 .back-btn {
   position: absolute;
   top: 50px; right: 20px;
@@ -66,7 +64,6 @@ body {
   transform: translate(2px, 2px);
   box-shadow: 1px 1px 0 var(--border-color);
 }
-/* 输入框：无边框、无背景、placeholder 半透明 */
 .input-box {
   width: 100%;
   max-width: 550px;
@@ -77,13 +74,12 @@ body {
   border: none;
   outline: none;
   background: transparent;
-  color: #000; /* 输入的单词颜色为黑色 */
+  color: #000;
 }
 .input-box::placeholder {
-  color: rgba(0, 0, 0, 0.4); /* 半透明提醒文字 */
+  color: rgba(0, 0, 0, 0.4);
   font-family: 'Fredoka One', cursive;
 }
-/* 中文释义 / 正误提示：微软雅黑，居中，颜色 #0D21A5 */
 .info {
   font-family: 'Microsoft YaHei', sans-serif;
   font-size: 24px;
@@ -92,7 +88,6 @@ body {
   min-height: 36px;
   transition: color 0.2s;
 }
-/* 咋读咧：站酷快乐体，背景 #D1D067，颜色 #0D21A5，立体阴影 */
 .speak-btn {
   background: #D1D067;
   border: none;
@@ -116,7 +111,6 @@ body {
   transform: translate(2px, 2px);
   box-shadow: none;
 }
-/* 确认按钮：右下角 */
 .confirm-btn {
   position: absolute;
   bottom: 80px; right: 30px;
@@ -146,6 +140,18 @@ body {
 <script>
 let wordItems = [], requiredCorrect = 3, order = 'random', wordProgress = {}, current = null, answerShown = false, infoTimer = null, remainingCount = 0;
 const infoEl = document.getElementById('info'), inputBox = document.getElementById('inputBox');
+
+// --- 语音引擎预热（修复延迟） ---
+let speechReady = false;
+function warmUpSpeech() {
+  if (speechReady) return;
+  const u = new SpeechSynthesisUtterance('');
+  u.volume = 0;
+  window.speechSynthesis.speak(u);
+  speechReady = true;
+}
+document.getElementById('speakBtn').addEventListener('mousedown', warmUpSpeech);
+document.getElementById('speakBtn').addEventListener('touchstart', warmUpSpeech);
 
 (async function init() {
   const source = localStorage.getItem('current_practice') || 'selfstudy';
@@ -229,7 +235,14 @@ function check() {
 
 document.getElementById('confirmBtn').onclick=check;
 inputBox.addEventListener('keydown',e=>{ if(e.key==='Enter') check(); });
-document.getElementById('speakBtn').onclick=()=>{ if(!current)return; const u=new SpeechSynthesisUtterance(current); u.lang='en-US'; speechSynthesis.speak(u); };
+
+document.getElementById('speakBtn').onclick = () => {
+  if (!current) return;
+  warmUpSpeech();
+  const u = new SpeechSynthesisUtterance(current);
+  u.lang = 'en-US';
+  window.speechSynthesis.speak(u);
+};
 </script>
 </body>
 </html>
