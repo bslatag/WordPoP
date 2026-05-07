@@ -232,38 +232,33 @@ def api_ocr():
     file = request.files['image']
     img_bytes = file.read()
     try:
+        # 由于前端已经做了二值化，我们直接打开，不重复处理
         img = Image.open(io.BytesIO(img_bytes)).convert('L')
     except Exception:
         return jsonify({'words': [], 'error': '图片无法解析'}), 400
 
-    # 缩放
-    w, h = img.size
-    max_size = 1500
-    if w > max_size or h > max_size:
-        img.thumbnail((max_size, max_size), Image.LANCZOS)
-
-    # 轻度锐化
-    img = img.filter(ImageFilter.SHARPEN)
-
-    # 识别，不限制字符
+    # 不缩放，保持清晰度
+    # 使用 PSM 6（均匀文本块）加白名单（只识别字母），最大化印刷体识别率
     try:
-        text = pytesseract.image_to_string(img, lang='eng', config='--psm 3')
+        text = pytesseract.image_to_string(img, lang='eng',
+            config='--psm 6 -c tessedit_char_whitelist=abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ')
     except Exception as e:
         return jsonify({'words': [], 'error': f'识别出错: {str(e)}'}), 500
 
     candidates = re.findall(r'[a-zA-Z]{2,20}', text.lower())
     db = get_db()
+    # 一次性取出词库所有单词和释义
     rows = db.execute("SELECT word, meaning FROM dictionary").fetchall()
     word_meaning_map = {row['word']: row['meaning'] for row in rows}
-    valid_words_set = set(word_meaning_map.keys())
+    valid_set = set(word_meaning_map.keys())
 
     seen = set()
     result = []
     for w in candidates:
-        if w in valid_words_set and w not in seen:
+        if w in valid_set and w not in seen:
             seen.add(w)
             result.append({'word': w, 'meaning': word_meaning_map.get(w, '暂无释义')})
-
+    return jsonify({'words': result})
     return jsonify({'words': result, 'raw_count': len(candidates), 'filtered_count': len(result)})
     candidates = re.findall(r'[a-zA-Z]{2,20}', text.lower())
     db = get_db()
