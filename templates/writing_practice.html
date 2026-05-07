@@ -33,6 +33,7 @@ body {
   align-items: center;
   justify-content: center;
 }
+/* 左上角进度 */
 .progress {
   position: absolute;
   top: 20px; left: 20px;
@@ -41,6 +42,7 @@ body {
   padding: 4px 12px;
   border-radius: 10px;
 }
+/* 退出按钮 - 右上角 */
 .back-btn {
   position: absolute;
   top: 20px; right: 20px;
@@ -51,7 +53,11 @@ body {
   border: 3px solid var(--border-color);
   font-size: 22px;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
+/* 输入行：喇叭 + 输入框 */
 .input-area {
   display: flex;
   align-items: center;
@@ -82,15 +88,22 @@ body {
   font-family: 'ZCOOL KuaiLe', cursive;
   line-height: 1;
 }
+/* 信息区：释义/正误提示，位于输入框右下角，左对齐 */
 .info {
+  width: 100%;
+  max-width: 400px;
+  text-align: left;
   font-size: 24px;
-  text-align: center;
   min-height: 36px;
   margin-bottom: 16px;
   color: var(--text-color);
+  padding-left: 42px; /* 给左侧喇叭留空，保持与输入框对齐 */
   transition: color 0.2s;
 }
+/* 确认按钮 - 右下角，与退出按钮同一竖直线 */
 .confirm-btn {
+  position: absolute;
+  bottom: 30px; right: 30px;
   background: transparent;
   border: none;
   font-size: 50px;
@@ -115,29 +128,42 @@ body {
 </div>
 
 <script>
-const allWords = JSON.parse(localStorage.getItem('all_words_json') || '[]');
-const wordMap = allWords.reduce((m, w) => {
-  m[w.单词] = w.释义;
-  return m;
-}, {});
+// 从后端获取释义映射，不依赖localStorage
+const allWordsPromise = fetch('/api/study-words?all=1')  // 后端需要支持返回全部词库，如添加参数或新增接口
+  .catch(() => fetch('/api/word-list/learned'))  // 兜底方案，确保不会崩溃
+  .then(res => res.ok ? res.json() : []);
 
 const source = localStorage.getItem('current_practice');
-const wordList = JSON.parse(localStorage.getItem(`wordpop_${source}`) || []);
+const wordList = JSON.parse(localStorage.getItem(`wordpop_${source}`) || '[]');
 const requiredCorrect = parseInt(localStorage.getItem('practice_required_correct'), 10) || 3;
 const order = localStorage.getItem('practice_order') || 'random';
 
 let orderedList = wordList;
 if (order === 'sequential') {
-  orderedList = [...wordList].sort(); // 字母表顺序
+  orderedList = [...wordList].sort();
 }
 
 const wordProgress = {};
 let current = null;
 let answerShown = false;
 let infoTimer = null;
+let wordMap = {};
 
 const infoEl = document.getElementById('info');
 const inputBox = document.getElementById('inputBox');
+
+// 初始化释义映射
+allWordsPromise.then(words => {
+  if (Array.isArray(words)) {
+    words.forEach(w => { wordMap[w.单词] = w.释义 || '暂无释义'; });
+  }
+  if (wordList.length === 0) {
+    infoEl.innerText = "暂无单词";
+    inputBox.disabled = true;
+  } else {
+    randWord();
+  }
+});
 
 function showInfo(text, color) {
   if (infoTimer) clearTimeout(infoTimer);
@@ -147,8 +173,8 @@ function showInfo(text, color) {
 
 function showMeaning() {
   if (!current) return;
-  const meaningText = wordMap[current] || '暂无释义';
-  infoEl.innerText = meaningText;
+  const meaning = wordMap[current] || '暂无释义';
+  infoEl.innerText = meaning;
   infoEl.style.color = '#0D2A5A';
 }
 
@@ -166,12 +192,8 @@ function getNextWord() {
     return p.correct < requiredCorrect;
   });
   if (available.length === 0) return null;
-
-  if (order === 'sequential') {
-    return available[0]; // 取第一个（保持字母顺序）
-  } else {
-    return available[Math.floor(Math.random() * available.length)];
-  }
+  if (order === 'sequential') return available[0];
+  return available[Math.floor(Math.random() * available.length)];
 }
 
 function randWord() {
@@ -182,13 +204,9 @@ function randWord() {
     document.getElementById('progress').innerText = `共 ${wordList.length} 词`;
     return;
   }
-
   current = next;
   answerShown = false;
-  if (!wordProgress[current]) {
-    wordProgress[current] = { correct: 0, wrong: 0 };
-  }
-
+  if (!wordProgress[current]) wordProgress[current] = { correct: 0, wrong: 0 };
   showMeaning();
   inputBox.value = '';
   inputBox.disabled = false;
@@ -248,13 +266,6 @@ document.getElementById('speakBtn').onclick = () => {
   u.lang = 'en-US';
   speechSynthesis.speak(u);
 };
-
-if (wordList.length === 0) {
-  infoEl.innerText = "暂无单词";
-  inputBox.disabled = true;
-} else {
-  randWord();
-}
 </script>
 </body>
 </html>
