@@ -258,6 +258,42 @@
             background: var(--card-color);
             color: var(--text-color);
         }
+        /* 手机适配：当屏幕宽度小于 600px 时 */
+        @media (max-width: 600px) {
+            .card-box {
+            width: 90vw;          /* 卡片宽度改为屏幕宽度的90% */
+            height: auto;         /* 高度自动适配 */
+            padding: 20px;
+        }
+        .word {
+            font-size: 48px;      /* 单词字号缩小 */
+        }
+        .speak-btn {
+            left: 5px;            /* 喇叭按钮往左靠一点 */
+            font-size: 28px;
+        }
+        .star-btn {
+            right: 5px;           /* 星标按钮往右靠一点 */
+            width: 48px;
+            height: 48px;
+            font-size: 24px;
+         }
+       .skip-btn {
+            bottom: 20px;
+            right: 5px;
+            padding: 8px 20px;
+            font-size: 18px;
+         }
+      .progress {
+            font-size: 16px;
+            padding: 4px 8px;
+         }
+      .back-btn {
+            width: 36px;
+            height: 36px;
+            font-size: 18px;
+         }
+       }  
     </style>
 </head>
 <body>
