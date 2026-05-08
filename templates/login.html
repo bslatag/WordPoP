@@ -2,19 +2,20 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>登录 WordPoP</title>
-<link href="https://fonts.loli.net/css2?family=ZCOOL+KuaiLe&display=swap" rel="stylesheet">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>默写本</title>
+<link href="https://fonts.loli.net/css2?family=Fredoka+One&family=ZCOOL+KuaiLe&display=swap" rel="stylesheet">
 <style>
 :root {
   --bg-color: #B9C7F8;
   --card-color: #D1D067;
-  --text-color: #0D21A5;
+  --text-color: #0D2A5A;
   --accent-pink: #FF6B9D;
   --accent-cyan: #00D2BE;
   --border-color: #2D3436;
+  --star-gold: #FFD700;
 }
-* { margin:0; padding:0; box-sizing:border-box; }
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
 body {
   font-family: 'ZCOOL KuaiLe', cursive;
   background: var(--bg-color);
@@ -22,40 +23,505 @@ body {
   display: flex;
   justify-content: center;
   align-items: center;
+  user-select: none;
 }
-.login-box {
+.container {
+  width: 100%;
+  max-width: 900px;
+  height: 100%;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  padding: 20px;
+}
+.header {
+  position: absolute;
+  top: 40px;
+  width: 90%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.title {
+  font-size: 36px;
+  color: var(--text-color);
+  transform: rotate(-2deg);
+  text-shadow: 2px 2px 0 #fff;
+}
+.back-btn {
+  width: 44px; height: 44px;
+  border-radius: 50%;
+  background: var(--accent-pink);
+  color: #fff;
+  border: 3px solid var(--border-color);
+  font-size: 22px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.list-wrapper {
+  position: relative;
+  width: 100%;
+  max-width: 480px;
+}
+.upload-corner-btn {
+  position: absolute;
+  top: -16px;
+  right: -16px;
+  width: 48px; height: 48px;
+  border-radius: 50%;
+  background: var(--accent-cyan);
+  color: #fff;
+  border: 3px solid var(--border-color);
+  font-size: 32px;
+  line-height: 1;
+  cursor: pointer;
+  z-index: 30;
+  display: none;
+  align-items: center;
+  justify-content: center;
+}
+.card {
+  width: 100%;
+  max-width: 480px;
+  padding: 28px 20px;
   background: var(--card-color);
   border: 4px solid var(--border-color);
-  border-radius: 30px;
-  box-shadow: 10px 10px 0 var(--border-color);
-  padding: 40px;
+  border-radius: 22px;
+  box-shadow: 6px 6px 0 var(--border-color);
   text-align: center;
-  width: 90%;
-  max-width: 400px;
+  cursor: pointer;
 }
-.login-box h1 { color: var(--text-color); font-size: 36px; margin-bottom: 20px; }
-.login-box input {
-  width: 100%; padding: 12px; font-size: 22px;
-  border-radius: 12px; border: 3px solid var(--border-color);
-  margin-bottom: 15px; text-align: center; font-family: 'ZCOOL KuaiLe', cursive;
+.card h2 { font-size: 26px; color: var(--text-color); }
+.list-container {
+  width: 100%;
+  max-width: 480px;
+  height: 70vh;
+  overflow-y: auto;
+  background: rgba(255,255,255,0.4);
+  border: 3px solid var(--border-color);
+  border-radius: 16px;
+  padding: 16px;
+  display: none;
 }
-.login-box button {
-  padding: 12px 30px; background: var(--accent-cyan); border: 3px solid var(--border-color);
-  border-radius: 15px; font-size: 22px; color: var(--text-color); cursor: pointer;
-  font-family: 'ZCOOL KuaiLe', cursive;
+.word-item {
+  padding: 12px 16px;
+  background: #fff;
+  border-radius: 10px;
+  margin-bottom: 10px;
+  font-size: 20px;
+  color: #222;
+  border: 2px solid var(--border-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
-.error { color: red; margin-bottom: 10px; }
+.word-item .word-text { display: flex; flex-direction: column; }
+.word-item .meaning-text { font-size: 14px; color: #666; }
+.word-item .actions { display: flex; gap: 8px; align-items: center; }
+.word-item .speak-small { background: none; border: none; font-size: 20px; cursor: pointer; }
+.word-item .del-btn {
+  background: var(--accent-pink); color: white; border: none;
+  width: 30px; height: 30px; border-radius: 50%; font-size: 16px; cursor: pointer;
+}
+.star { font-size: 22px; color: var(--star-gold); cursor: pointer; transition: all 0.2s; }
+.star.active { color: var(--accent-pink); transform: scale(1.2); }
+.start-btn {
+  padding: 14px 36px;
+  background: var(--accent-cyan); border: 3px solid var(--border-color);
+  border-radius: 16px; font-size: 22px; color: var(--text-color); cursor: pointer; display: none;
+}
+.manual-add { display: none; align-items: center; gap: 10px; margin-top: 10px; font-size: 20px; }
+.manual-add input {
+  font-size: 20px; padding: 5px 10px; border-radius: 8px; border: 2px solid var(--border-color);
+  font-family: 'Fredoka One', cursive; width: 180px;
+}
+.manual-add button {
+  font-size: 20px; padding: 8px 16px; border-radius: 8px; border: 2px solid var(--border-color);
+  background: var(--accent-cyan); color: var(--text-color); cursor: pointer; font-family: 'ZCOOL KuaiLe', cursive;
+}
+.modal {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(45,52,54,0.8); display: none;
+  align-items: center; justify-content: center; z-index: 999; backdrop-filter: blur(5px);
+}
+.modal.show { display: flex; }
+.modal-content {
+  background: white; border: 4px solid var(--border-color); border-radius: 30px; padding: 40px;
+  text-align: center; box-shadow: 15px 15px 0 rgba(0,0,0,0.2); max-width: 90%;
+}
+.modal-content h3 { font-size: 28px; color: var(--text-color); margin-bottom: 20px; }
+.modal-btns { display: flex; gap: 20px; justify-content: center; margin-top: 20px; }
+.modal-btn {
+  padding: 15px 30px; border-radius: 15px; border: 3px solid var(--border-color);
+  font-size: 20px; font-family: 'ZCOOL KuaiLe', cursive; cursor: pointer;
+}
+.modal-btn.primary { background: var(--accent-pink); color: white; }
+.modal-btn.secondary { background: var(--card-color); color: var(--text-color); }
+#fileInput { display: none; }
 </style>
 </head>
 <body>
-<div class="login-box">
-  <h1>WordPoP 登录</h1>
-  {% if error %}<p class="error">{{ error }}</p>{% endif %}
-  <form method="post">
-    <input type="text" name="username" placeholder="输入用户名（学号）" required>
-    <button type="submit">登录</button>
-  </form>
-  <p style="margin-top:15px; font-size:16px;"><a href="/" style="color:var(--text-color);">跳过，继续使用</a></p>
+<div class="container">
+  <div class="header">
+    <div class="title">默写本</div>
+    <button class="back-btn" id="backBtn" onclick="goBack()">✕</button>
+  </div>
+
+  <div class="card" onclick="showList('starred')"><h2>我的收藏</h2></div>
+  <div class="card" onclick="showList('learned')"><h2>已学单词</h2></div>
+  <div class="card" onclick="showList('selfstudy')"><h2>默写自习室</h2></div>
+
+  <div class="list-wrapper">
+    <div class="list-container" id="listBox"></div>
+    <button class="upload-corner-btn" id="uploadBtn" title="添加单词（拍照/图库）">＋</button>
+  </div>
+
+  <div class="manual-add" id="manualAddBox">
+    <input type="text" id="manualAddInput" placeholder="粘贴/输入单词">
+    <button id="manualAddBtn">添加</button>
+  </div>
+
+  <button class="start-btn" id="startBtn">开始默写</button>
 </div>
+
+<!-- 默写设置模态框 -->
+<div class="modal" id="practiceModal">
+  <div class="modal-content">
+    <h3>默写设置</h3>
+    <div style="margin:10px 0;">
+      <label>轮默次数：</label>
+      <select id="modalRoundsSelect">
+        <option value="1">1</option><option value="2">2</option>
+        <option value="3" selected>3</option>
+        <option value="4">4</option><option value="5">5</option>
+      </select>
+    </div>
+    <div style="margin:10px 0;">
+      <label>默写顺序：</label>
+      <select id="modalOrderSelect">
+        <option value="random">随机</option>
+        <option value="sequential">顺序</option>
+      </select>
+    </div>
+    <div class="modal-btns">
+      <button class="modal-btn secondary" id="cancelPracticeBtn">取消</button>
+      <button class="modal-btn primary" id="confirmPracticeBtn">开始</button>
+    </div>
+  </div>
+</div>
+
+<!-- 登录提示模态框 -->
+<div class="modal" id="loginPromptModal">
+  <div class="modal-content">
+    <h3>登录后可保存进度</h3>
+    <p style="margin-bottom:20px;">登录后学习记录和收藏不会丢失哦</p>
+    <div class="modal-btns">
+      <button class="modal-btn secondary" id="laterLoginBtn">稍后再说</button>
+      <button class="modal-btn primary" id="goLoginBtn">去登录</button>
+    </div>
+  </div>
+</div>
+
+<input type="file" id="fileInput" accept="image/*">
+
+<!-- Tesseract.js v5 -->
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<script>
+let currentType = '';
+let currentView = 'cards';
+let globalDictionary = {};
+let fetchSeq = 0;
+
+fetch('/api/dictionary')
+  .then(res => res.json())
+  .then(dict => { globalDictionary = dict; })
+  .catch(() => {});
+
+async function apiFetch(url, options = {}) {
+  try {
+    const res = await fetch(url, options);
+    if (!res.ok) return [];
+    return await res.json();
+  } catch (err) { console.error(err); return []; }
+}
+
+function showLoading(text) {
+  const exist = document.getElementById('__loading__');
+  if (exist) exist.innerText = text;
+  else {
+    const el = document.createElement('div');
+    el.id = '__loading__';
+    el.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#000;color:#fff;padding:12px 24px;border-radius:8px;z-index:9999;';
+    el.innerText = text || '加载中...';
+    document.body.appendChild(el);
+  }
+}
+function hideLoading() {
+  const el = document.getElementById('__loading__');
+  if (el) el.remove();
+}
+
+function showCards() {
+  document.querySelectorAll('.card').forEach(c => c.style.display = 'block');
+  document.getElementById('listBox').style.display = 'none';
+  document.getElementById('startBtn').style.display = 'none';
+  document.getElementById('manualAddBox').style.display = 'none';
+  document.getElementById('uploadBtn').style.display = 'none';
+  currentView = 'cards';
+  document.getElementById('backBtn').onclick = () => { window.location.href = '/'; };
+}
+function goBack() {
+  if (currentView === 'list') showCards();
+  else window.location.href = '/';
+}
+
+async function showList(type) {
+  currentType = type;
+  document.querySelectorAll('.card').forEach(c => c.style.display = 'none');
+  document.getElementById('listBox').style.display = 'block';
+  document.getElementById('startBtn').style.display = 'block';
+  document.getElementById('uploadBtn').style.display = (type === 'selfstudy') ? 'flex' : 'none';
+  document.getElementById('manualAddBox').style.display = (type === 'selfstudy') ? 'flex' : 'none';
+  await refreshList(type);
+  currentView = 'list';
+  document.getElementById('backBtn').onclick = () => { showCards(); };
+}
+
+async function refreshList(type) {
+  const seq = ++fetchSeq;
+  const data = await apiFetch(`/api/word-list/${type}`);
+  if (seq === fetchSeq) renderWordListDom(type, data || []);
+}
+
+function renderWordListDom(type, list) {
+  const container = document.getElementById('listBox');
+  const btn = document.getElementById('uploadBtn');
+  let child = container.firstChild;
+  while (child) {
+    const next = child.nextSibling;
+    if (child.id !== 'uploadBtn') container.removeChild(child);
+    child = next;
+  }
+  if (!container.contains(btn)) container.appendChild(btn);
+
+  const fragment = document.createDocumentFragment();
+  for (const w of list) {
+    const item = document.createElement('div');
+    item.className = 'word-item';
+    const wordText = typeof w === 'object' ? w.word : w;
+    const meaningText = typeof w === 'object' ? (w.meaning || globalDictionary[wordText] || '') : (globalDictionary[wordText] || '');
+    const meaningHTML = meaningText ? `<span class="meaning-text">${meaningText}</span>` : '';
+    const speakBtnHTML = (type === 'selfstudy') ? `<button class="speak-small" onclick="speakWord('${wordText}')">🔊</button>` : '';
+    const starHTML = (type === 'starred') ? `<span class="star active" onclick="toggleStar('${wordText}')">★</span>` : '';
+    const delHTML = (type === 'selfstudy') ? `<button class="del-btn" onclick="deleteWord('${wordText}')">✕</button>` : '';
+    item.innerHTML = `
+      <div class="word-text"><span>${wordText}</span>${meaningHTML}</div>
+      <div class="actions">${starHTML}${speakBtnHTML}${delHTML}</div>
+    `;
+    fragment.appendChild(item);
+  }
+  container.appendChild(fragment);
+}
+
+function speakWord(word) {
+  if (!word) return;
+  const u = new SpeechSynthesisUtterance(word);
+  u.lang = 'en-US';
+  speechSynthesis.speak(u);
+}
+
+async function deleteWord(word) {
+  await apiFetch('/api/remove-from-list', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({word}) });
+  refreshList('selfstudy');
+}
+async function toggleStar(word) {
+  await apiFetch('/api/toggle-star', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({word}) });
+  refreshList(currentType);
+}
+
+// 手动添加按钮：自动判断单个单词或批量粘贴
+document.getElementById('manualAddBtn').onclick = async function() {
+  const input = document.getElementById('manualAddInput');
+  const raw = input.value.trim();
+  if (!raw) return;
+
+  if (/\s/.test(raw)) {
+    // 批量粘贴处理
+    const candidates = [...new Set(
+      (raw.match(/[a-zA-Z]{2,20}/g) || []).map(w => w.toLowerCase())
+    )];
+    if (candidates.length === 0) {
+      alert('未发现有效英文单词，请检查粘贴内容');
+      return;
+    }
+    const validWords = [];
+    for (const w of candidates) {
+      const check = await apiFetch(`/api/check-word?word=${w}`);
+      if (check.valid) validWords.push(w);
+    }
+    if (validWords.length > 0) {
+      for (const w of validWords) {
+        await apiFetch('/api/add-to-list', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({word: w}) });
+      }
+      input.value = '';
+      refreshList('selfstudy');
+      alert(`成功导入 ${validWords.length} 个单词`);
+    } else {
+      alert('未找到在词库中的有效单词');
+    }
+    return;
+  }
+
+  // 单个单词原有逻辑
+  const word = raw.toLowerCase();
+  if (!/^[a-zA-Z]{2,20}$/.test(word)) {
+    alert('请输入有效的英文单词（2~20个字母）');
+    return;
+  }
+  const checkRes = await apiFetch(`/api/check-word?word=${word}`);
+  if (!checkRes.valid) {
+    if (!confirm('该词不在词库中，可能拼写错误。确定添加吗？')) return;
+  }
+  await apiFetch('/api/add-to-list', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({word}) });
+  input.value = '';
+  refreshList('selfstudy');
+};
+
+document.getElementById('uploadBtn').onclick = function() {
+  document.getElementById('fileInput').click();
+};
+
+// OTSU 二值化函数
+function otsuBinarize(imageData) {
+  const data = imageData.data;
+  let histogram = new Array(256).fill(0);
+  for (let i = 0; i < data.length; i += 4) {
+    const gray = 0.299 * data[i] + 0.587 * data[i+1] + 0.114 * data[i+2];
+    histogram[Math.floor(gray)]++;
+    data[i] = data[i+1] = data[i+2] = gray;
+  }
+  let total = imageData.width * imageData.height;
+  let sum = 0;
+  for (let i = 0; i < 256; i++) sum += i * histogram[i];
+  let sumB = 0, wB = 0, wF = 0, maxVariance = 0, threshold = 128;
+  for (let i = 0; i < 256; i++) {
+    wB += histogram[i];
+    if (wB === 0) continue;
+    wF = total - wB;
+    if (wF === 0) break;
+    sumB += i * histogram[i];
+    const mB = sumB / wB;
+    const mF = (sum - sumB) / wF;
+    const variance = wB * wF * (mB - mF) * (mB - mF);
+    if (variance > maxVariance) { maxVariance = variance; threshold = i; }
+  }
+  for (let i = 0; i < data.length; i += 4) {
+    const val = data[i] > threshold ? 255 : 0;
+    data[i] = data[i+1] = data[i+2] = val;
+  }
+  return imageData;
+}
+
+// 拍照/图库 OCR 识别
+document.getElementById('fileInput').onchange = async function(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  this.value = '';
+  showLoading('识别中...');
+  try {
+    const img = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const image = new Image();
+        image.onload = () => resolve(image);
+        image.onerror = reject;
+        image.src = ev.target.result;
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+
+    const canvas = document.createElement('canvas');
+    canvas.width = img.width;
+    canvas.height = img.height;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0, 0);
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    otsuBinarize(imageData);
+    ctx.putImageData(imageData, 0, 0);
+    const processedDataUrl = canvas.toDataURL('image/png');
+
+    const worker = await Tesseract.createWorker('eng', 1);
+    const { data: { text } } = await worker.recognize(processedDataUrl, {
+      tessedit_pageseg_mode: '6',
+      tessedit_char_whitelist: 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
+    });
+    await worker.terminate();
+
+    const candidates = [...new Set((text.match(/[a-zA-Z]{2,20}/g) || []).map(w => w.toLowerCase()))];
+
+    if (candidates.length === 0) {
+      hideLoading();
+      alert('未识别到字母，请重拍');
+      return;
+    }
+
+    const validWords = [];
+    for (const w of candidates) {
+      const check = await apiFetch(`/api/check-word?word=${w}`);
+      if (check.valid) validWords.push(w);
+    }
+
+    if (validWords.length > 0) {
+      for (const w of validWords) {
+        await apiFetch('/api/add-to-list', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({word: w}) });
+      }
+      refreshList('selfstudy');
+      hideLoading();
+      alert(`成功添加 ${validWords.length} 个单词`);
+    } else {
+      hideLoading();
+      alert('无有效单词（词库过滤），可手动添加');
+    }
+  } catch (err) {
+    hideLoading();
+    alert('识别失败，请重试');
+  }
+};
+
+document.getElementById('startBtn').onclick = async function() {
+  const data = await apiFetch(`/api/word-list/${currentType}`);
+  if (data.length === 0) { alert('单词列表为空，请先添加单词'); return; }
+  if (currentType === 'selfstudy') {
+    document.getElementById('practiceModal').classList.add('show');
+  } else {
+    localStorage.setItem('practice_required_correct', 3);
+    localStorage.setItem('practice_order', 'random');
+    localStorage.setItem('current_practice', currentType);
+    window.location.href = '/writing/practice';
+  }
+};
+document.getElementById('cancelPracticeBtn').onclick = function() {
+  document.getElementById('practiceModal').classList.remove('show');
+};
+document.getElementById('confirmPracticeBtn').onclick = function() {
+  const rounds = document.getElementById('modalRoundsSelect').value;
+  const order = document.getElementById('modalOrderSelect').value;
+  localStorage.setItem('practice_required_correct', rounds);
+  localStorage.setItem('practice_order', order);
+  localStorage.setItem('current_practice', currentType);
+  window.location.href = '/writing/practice';
+};
+
+document.getElementById('laterLoginBtn').onclick = () => document.getElementById('loginPromptModal').classList.remove('show');
+document.getElementById('goLoginBtn').onclick = () => window.location.href = '/login';
+
+showCards();
+</script>
 </body>
 </html>
