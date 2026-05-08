@@ -32,11 +32,11 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 16px;
+  gap: 14px;
 }
 .progress {
   position: absolute;
-  top: 50px; left: -30px;
+  top: 50px; left: -50px;
   font-family: 'Microsoft YaHei', sans-serif;
   font-size: 22px;
   color:#0D21A5;
@@ -45,7 +45,7 @@ body {
 }
 .back-btn {
   position: absolute;
-  top: 50px; right: -30px;
+  top: 50px; right: -50px;
   width: 44px; height: 44px;
   border-radius: 50%;
   background: var(--accent-pink);
@@ -94,12 +94,7 @@ body {
   font-size: 42px;
   font-weight: bold;
   color: #D1D067;
-  text-shadow:
-    -2px -2px 0 #fff,
-     2px -2px 0 #fff,
-    -2px  2px 0 #fff,
-     2px 2px 0 #fff,
-     4px 4px 0 #0D21A5;
+  text-shadow: 4px 4px 0 #0D21A5;
   cursor: pointer;
   font-family: 'ZCOOL KuaiLe', cursive;
   line-height: 1;
@@ -109,7 +104,7 @@ body {
 }
 .speak-btn:active {
   transform: translate(2px, 2px);
-  box-shadow: none;
+  text-shadow: 2px 2px 0 #0D21A5;
 }
 .confirm-btn {
   position: absolute;
@@ -141,7 +136,6 @@ body {
 let wordItems = [], requiredCorrect = 3, order = 'random', wordProgress = {}, current = null, answerShown = false, infoTimer = null, remainingCount = 0;
 const infoEl = document.getElementById('info'), inputBox = document.getElementById('inputBox');
 
-// --- 语音引擎预热（修复延迟） ---
 let speechReady = false;
 function warmUpSpeech() {
   if (speechReady) return;
