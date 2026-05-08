@@ -81,14 +81,26 @@ def writing():
 def writing_practice():
     return render_template('writing_practice.html')
 
-# ── API ──
 @app.route('/api/user')
 def api_user():
     user_id = get_current_user()
     db = get_db()
-    user = db.execute("SELECT id, username FROM users WHERE id = ?", (user_id,)).fetchone()
-    return jsonify({'id': user['id'], 'username': user['username'], 'is_guest': user['username'] is None})
-
+    user = db.execute("SELECT id, username, created_at FROM users WHERE id = ?", (user_id,)).fetchone()
+    
+    # 统计待默写单词数
+    pending = db.execute("SELECT COUNT(*) as count FROM learned_words WHERE user_id = ?", (user_id,)).fetchone()
+    
+    from datetime import datetime
+    created = datetime.strptime(user['created_at'], '%Y-%m-%d %H:%M:%S')
+    days = (datetime.now() - created).days + 1  # 至少1天
+    
+    return jsonify({
+        'id': user['id'],
+        'username': user['username'],
+        'is_guest': user['username'] is None,
+        'study_days': days,
+        'pending_words': pending['count'] if pending else 0
+    })
 @app.route('/api/study-words')
 def api_study_words():
     user_id = get_current_user()
