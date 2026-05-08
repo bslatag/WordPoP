@@ -357,38 +357,7 @@ document.getElementById('uploadBtn').onclick = function() {
   document.getElementById('fileInput').click();
 };
 
-// ---- OTSU 二值化 ----
-function otsuBinarize(imageData) {
-  const data = imageData.data;
-  let histogram = new Array(256).fill(0);
-  for (let i = 0; i < data.length; i += 4) {
-    const gray = 0.299 * data[i] + 0.587 * data[i+1] + 0.114 * data[i+2];
-    histogram[Math.floor(gray)]++;
-    data[i] = data[i+1] = data[i+2] = gray;
-  }
-  let total = imageData.width * imageData.height;
-  let sum = 0;
-  for (let i = 0; i < 256; i++) sum += i * histogram[i];
-  let sumB = 0, wB = 0, wF = 0, maxVariance = 0, threshold = 128;
-  for (let i = 0; i < 256; i++) {
-    wB += histogram[i];
-    if (wB === 0) continue;
-    wF = total - wB;
-    if (wF === 0) break;
-    sumB += i * histogram[i];
-    const mB = sumB / wB;
-    const mF = (sum - sumB) / wF;
-    const variance = wB * wF * (mB - mF) * (mB - mF);
-    if (variance > maxVariance) { maxVariance = variance; threshold = i; }
-  }
-  for (let i = 0; i < data.length; i += 4) {
-    const val = data[i] > threshold ? 255 : 0;
-    data[i] = data[i+1] = data[i+2] = val;
-  }
-  return imageData;
-}
-
-// ---- 前端识别 + 后端过滤 ----
+// ---------- OCR 识别：纯前端 + 后端过滤 ----------
 document.getElementById('fileInput').onchange = async function(e) {
   const file = e.target.files[0];
   if (!file) return;
@@ -413,11 +382,18 @@ document.getElementById('fileInput').onchange = async function(e) {
     const ctx = canvas.getContext('2d');
     ctx.drawImage(img, 0, 0);
     const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    otsuBinarize(imageData);
+    const data = imageData.data;
+    // 对比度增强：系数1.5，亮度偏移-30
+    for (let i = 0; i < data.length; i += 4) {
+      let gray = 0.299 * data[i] + 0.587 * data[i+1] + 0.114 * data[i+2];
+      gray = Math.min(255, Math.max(0, (gray - 128) * 1.5 + 128));
+      data[i] = data[i+1] = data[i+2] = gray;
+    }
     ctx.putImageData(imageData, 0, 0);
     const processedDataUrl = canvas.toDataURL('image/png');
 
     const worker = await Tesseract.createWorker('eng', 1, {
+      langPath: 'https://cdn.jsdelivr.net/npm/@tesseract.js-data/eng@1.0.0/4.0.0_best',
       logger: m => {
         if (m.status === 'recognizing text') {
           showLoading(`识别中 ${Math.round(m.progress * 100)}%`);
@@ -431,7 +407,11 @@ document.getElementById('fileInput').onchange = async function(e) {
     await worker.terminate();
 
     const candidates = [...new Set((text.match(/[a-zA-Z]{2,20}/g) || []).map(w => w.toLowerCase()))];
-    if (candidates.length === 0) { alert('未识别到字母，请重拍'); return; }
+    if (candidates.length === 0) { 
+      hideLoading();
+      alert('未识别到字母，请重拍'); 
+      return; 
+    }
 
     // 批量校验
     const validWords = [];
@@ -445,11 +425,14 @@ document.getElementById('fileInput').onchange = async function(e) {
         await apiFetch('/api/add-to-list', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({word: w}) });
       }
       refreshList('selfstudy');
+      hideLoading();
       alert(`成功添加 ${validWords.length} 个单词`);
     } else {
-      alert('无有效单词（词库过滤）');
+      hideLoading();
+      alert('无有效单词（词库过滤），可手动添加');
     }
   } catch (err) {
+    hideLoading();
     alert('识别失败，请重试');
   } finally {
     hideLoading();
