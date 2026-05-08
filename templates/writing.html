@@ -266,12 +266,54 @@ async function refreshList(type) {
 
 function renderWordListDom(type, list) {
   const container = document.getElementById('listBox');
+  const btn = document.getElementById('uploadBtn');
   let child = container.firstChild;
   while (child) {
     const next = child.nextSibling;
-    container.removeChild(child);
+    if (child.id !== 'uploadBtn') container.removeChild(child);
     child = next;
   }
+  if (!container.contains(btn)) container.appendChild(btn);
+
+  const fragment = document.createDocumentFragment();
+  for (const w of list) {
+    const item = document.createElement('div');
+    item.className = 'word-item';
+
+    // 优先使用接口返回的 meaning；如果没有，再从 globalDictionary 取
+    const wordText = typeof w === 'object' ? w.word : w;
+    let meaningText = '';
+    if (typeof w === 'object' && w.meaning && w.meaning !== '暂无释义') {
+      meaningText = w.meaning;
+    } else if (globalDictionary[wordText]) {
+      meaningText = globalDictionary[wordText];
+    } else {
+      // 为了避免阻塞渲染，异步更新
+      meaningText = '…';
+      fetch(`/api/check-word?word=${wordText}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.valid && data.meaning) {
+            globalDictionary[wordText] = data.meaning;
+            const span = item.querySelector('.meaning-text');
+            if (span) span.textContent = data.meaning;
+          }
+        });
+    }
+
+    const meaningHTML = `<span class="meaning-text">${meaningText}</span>`;
+    const speakBtnHTML = (type === 'selfstudy') ? `<button class="speak-small" onclick="speakWord('${wordText}')">🔊</button>` : '';
+    const starHTML = (type === 'starred') ? `<span class="star active" onclick="toggleStar('${wordText}')">★</span>` : '';
+    const delHTML = (type === 'selfstudy') ? `<button class="del-btn" onclick="deleteWord('${wordText}')">✕</button>` : '';
+
+    item.innerHTML = `
+      <div class="word-text"><span>${wordText}</span>${meaningHTML}</div>
+      <div class="actions">${starHTML}${speakBtnHTML}${delHTML}</div>
+    `;
+    fragment.appendChild(item);
+  }
+  container.appendChild(fragment);
+}
 
   const fragment = document.createDocumentFragment();
   for (const w of list) {
