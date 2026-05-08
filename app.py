@@ -84,11 +84,11 @@ def api_user():
     user_id = get_current_user()
     db = get_db()
     user = db.execute("SELECT id, username, created_at FROM users WHERE id = ?", (user_id,)).fetchone()
-
+    
     pending = db.execute("SELECT COUNT(*) as count FROM learned_words WHERE user_id = ?", (user_id,)).fetchone()
     
     days = 1
-    if user['created_at']:
+    if user and user['created_at']:
         try:
             from datetime import datetime
             created = datetime.strptime(user['created_at'], '%Y-%m-%d %H:%M:%S')
@@ -97,9 +97,9 @@ def api_user():
             days = 1
     
     return jsonify({
-        'id': user['id'],
-        'username': user['username'],
-        'is_guest': user['username'] is None,
+        'id': user['id'] if user else 0,
+        'username': user['username'] if user else None,
+        'is_guest': user['username'] is None if user else True,
         'study_days': days,
         'pending_words': pending['count'] if pending else 0
     })
