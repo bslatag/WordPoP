@@ -3,265 +3,171 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>登录 WordPoP</title>
+<title>用户中心 - WordPoP</title>
 <link href="https://fonts.loli.net/css2?family=ZCOOL+KuaiLe&display=swap" rel="stylesheet">
 <style>
-    :root {
-        --bg-color: #B9C7F8;
-        --card-color: #D1D067;
-        --text-color: #0D21A5;
-        --border-color: #2D3436;
-    }
-
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-
-    body {
-        font-family: 'ZCOOL KuaiLe', cursive;
-        background-color: var(--bg-color);
-        height: 100vh;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        overflow: hidden;
-    }
-
-    /* --- 漫画集中线背景 (默认隐藏) --- */
-    .speed-lines {
-        position: fixed;
-        top: 0; left: 0; width: 100%; height: 100%;
-        background: repeating-conic-gradient(
-            from 0deg,
-            rgba(255,255,255,0.2) 0deg 10deg,
-            transparent 10deg 20deg
-        );
-        opacity: 0;
-        pointer-events: none;
-        z-index: 99;
-    }
-
-    .login-box {
-        background: var(--card-color);
-        border: 4px solid var(--border-color);
-        padding: 50px 40px;
-        border-radius: 30px;
-        text-align: center;
-        width: 90%;
-        max-width: 420px;
-        box-shadow: 12px 12px 0 var(--border-color); 
-        position: relative;
-        z-index: 10;
-        transition: transform 0.1s;
-    }
-
-    /* --- 震动动画 --- */
-    .shake-hard {
-        animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
-    }
-
-    @keyframes shake {
-        10%, 90% { transform: translate3d(-2px, 0, 0); }
-        20%, 80% { transform: translate3d(4px, 0, 0); }
-        30%, 50%, 70% { transform: translate3d(-8px, 0, 0); }
-        40%, 60% { transform: translate3d(8px, 0, 0); }
-    }
-
-    .login-box h1 {
-        color: var(--text-color);
-        font-size: 42px;
-        margin-bottom: 40px;
-        letter-spacing: 2px;
-    }
-
-    .login-box input {
-        width: 100%;
-        padding: 15px 10px;
-        font-size: 20px;
-        background: #fff;
-        border: 3px solid var(--border-color);
-        border-radius: 15px;
-        margin-bottom: 30px;
-        text-align: center;
-        font-family: 'ZCOOL KuaiLe', cursive;
-        color: var(--text-color);
-        outline: none;
-    }
-
-    .login-box input:focus {
-        transform: scale(1.05) rotate(-1deg);
-        border-color: var(--text-color);
-        box-shadow: 4px 4px 0 rgba(0,0,0,0.1);
-    }
-
-    .login-box button {
-        background: var(--text-color);
-        color: #fff;
-        border: 3px solid var(--border-color);
-        padding: 15px 50px;
-        font-size: 24px;
-        border-radius: 15px;
-        cursor: pointer;
-        font-family: 'ZCOOL KuaiLe', cursive;
-        box-shadow: 6px 6px 0 var(--border-color);
-        transition: all 0.1s;
-        position: relative;
-        overflow: hidden;
-    }
-
-    .login-box button:active {
-        transform: translate(4px, 4px);
-        box-shadow: 2px 2px 0 var(--border-color);
-    }
-
-    /* --- 漫画气泡 --- */
-    .comic-bubble {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%) scale(0);
-        background: #fff;
-        border: 4px solid var(--border-color);
-        padding: 20px 40px;
-        border-radius: 50%;
-        z-index: 100;
-        text-align: center;
-        pointer-events: none;
-        box-shadow: 8px 8px 0 rgba(0,0,0,0.2);
-    }
-
-    .comic-bubble::after {
-        content: '';
-        position: absolute;
-        bottom: -20px;
-        left: 50%;
-        transform: translateX(-50%);
-        border-width: 20px 20px 0;
-        border-style: solid;
-        border-color: var(--border-color) transparent transparent;
-        display: block;
-        width: 0;
-    }
-    .comic-bubble::before {
-        content: '';
-        position: absolute;
-        bottom: -14px;
-        left: 50%;
-        transform: translateX(-50%);
-        border-width: 14px 14px 0;
-        border-style: solid;
-        border-color: #fff transparent transparent;
-        display: block;
-        width: 0;
-        z-index: 1;
-    }
-
-    .bubble-text {
-        font-size: 36px;
-        color: var(--text-color);
-        transform: rotate(-5deg);
-        display: block;
-    }
-
-    @keyframes pop-bubble {
-        0% { transform: translate(-50%, -50%) scale(0) rotate(-20deg); }
-        60% { transform: translate(-50%, -50%) scale(1.2) rotate(5deg); }
-        100% { transform: translate(-50%, -50%) scale(1) rotate(0deg); }
-    }
-
-    .comic-bubble.active {
-        animation: pop-bubble 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
-    }
-
-    /* --- 纸屑 --- */
-    .confetti {
-        position: absolute;
-        width: 12px;
-        height: 12px;
-        background: var(--text-color);
-        border: 2px solid var(--border-color);
-        z-index: 90;
-    }
-
+:root {
+  --bg-color: #B9C7F8;
+  --card-color: #D1D067;
+  --text-color: #0D21A5;
+  --accent-pink: #FF6B9D;
+  --accent-cyan: #00D2BE;
+  --border-color: #2D3436;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family: 'ZCOOL KuaiLe', cursive;
+  background: var(--bg-color);
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.container {
+  width: 100%;
+  max-width: 460px;
+  padding: 20px;
+}
+.card {
+  background: var(--card-color);
+  border: 4px solid var(--border-color);
+  border-radius: 30px;
+  padding: 40px 30px;
+  box-shadow: 8px 8px 0 var(--border-color);
+  text-align: center;
+}
+.card h1 {
+  color: var(--text-color);
+  font-size: 42px;
+  margin-bottom: 30px;
+}
+.info-block {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  align-items: center;
+}
+.stat-row {
+  display: flex;
+  gap: 30px;
+  justify-content: center;
+}
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-size: 24px;
+  color: var(--text-color);
+}
+.stat-item .num {
+  font-size: 40px;
+  font-weight: bold;
+}
+.btn {
+  background: var(--accent-pink);
+  color: white;
+  border: 3px solid var(--border-color);
+  padding: 12px 30px;
+  border-radius: 15px;
+  font-size: 22px;
+  cursor: pointer;
+  font-family: 'ZCOOL KuaiLe', cursive;
+  box-shadow: 4px 4px 0 var(--border-color);
+  transition: all 0.1s;
+}
+.btn:active {
+  transform: translate(2px,2px);
+  box-shadow: 1px 1px 0 var(--border-color);
+}
+.form-input {
+  width: 100%;
+  padding: 12px;
+  font-size: 20px;
+  border: 3px solid var(--border-color);
+  border-radius: 12px;
+  text-align: center;
+  font-family: 'ZCOOL KuaiLe', cursive;
+  margin-bottom: 20px;
+  outline: none;
+}
+.login-btn {
+  background: var(--text-color);
+  color: #fff;
+  border: 3px solid var(--border-color);
+  padding: 12px 40px;
+  font-size: 22px;
+  border-radius: 12px;
+  cursor: pointer;
+  font-family: 'ZCOOL KuaiLe', cursive;
+  box-shadow: 4px 4px 0 var(--border-color);
+  transition: all 0.1s;
+}
+.login-btn:active {
+  transform: translate(2px,2px);
+  box-shadow: 2px 2px 0 var(--border-color);
+}
+.hidden {
+  display: none;
+}
 </style>
 </head>
 <body>
-
-<div class="speed-lines" id="speedLines"></div>
-
-<div class="login-box" id="loginBox">
+<div class="container">
+  <div class="card">
     <h1>WordPoP</h1>
-    <!-- 这里的 id 很重要 -->
-    <form id="loginForm">
-        <input type="text" name="username" placeholder="输入学号 / 用户名" required>
-        <button type="submit" id="loginBtn">开始学习</button>
-    </form>
+
+    <!-- 已登录用户信息面板 -->
+    <div id="userPanel" class="hidden">
+      <div class="info-block">
+        <div style="font-size:28px; color:var(--text-color);" id="greeting"></div>
+        <div class="stat-row">
+          <div class="stat-item">
+            <span class="num" id="studyDays">0</span>
+            <span>已学天数</span>
+          </div>
+          <div class="stat-item">
+            <span class="num" id="pendingWords">0</span>
+            <span>待默写</span>
+          </div>
+        </div>
+        <button class="btn" id="logoutBtnPage">退出登录</button>
+      </div>
+    </div>
+
+    <!-- 未登录/游客登录表单 -->
+    <div id="loginPanel" class="hidden">
+      <form id="loginForm" method="post">
+        <input type="text" name="username" placeholder="输入学号 / 用户名" class="form-input" required>
+        <button type="submit" class="login-btn">登录/注册</button>
+      </form>
+      <p style="margin-top:15px;"><a href="/" style="color:var(--text-color);">返回首页</a></p>
+    </div>
+  </div>
 </div>
 
 <script>
-   const loginForm = document.getElementById('loginForm');
-   const loginBtn = document.getElementById('loginBtn');
-   const loginBox = document.getElementById('loginBox');
-   const speedLines = document.getElementById('speedLines');
-
-   loginForm.addEventListener('submit', function(e) {
- 
-       e.preventDefault();
-
-       triggerSuccessAnimation();
-
-       setTimeout(() => {
-           HTMLFormElement.prototype.submit.call(loginForm);
-       }, 1500);
-   });
-
-   function triggerSuccessAnimation() {
-       loginBox.classList.add('shake-hard');
-       speedLines.style.opacity = '1';
-       speedLines.style.transition = 'opacity 0.2s';
-
-       const bubble = document.createElement('div');
-       bubble.className = 'comic-bubble';
-       bubble.innerHTML = '<span class="bubble-text">走你！</span>';
-       document.body.appendChild(bubble);
-
-       void bubble.offsetWidth;
-       bubble.classList.add('active');
-
-       createConfetti();
-
-       setTimeout(() => {
-           loginBox.classList.remove('shake-hard');
-           speedLines.style.opacity = '0';
-       }, 600);
-   }
-
-   function createConfetti() {
-      const colors = ['#D1D067', '#0D21A5', '#FF6B9D', '#fff'];
-      const rect = loginBox.getBoundingClientRect();
-    
-      for(let i = 0; i < 30; i++) {
-          const conf = document.createElement('div');
-          conf.className = 'confetti';
-          conf.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
-          conf.style.left = (rect.left + rect.width/2 + (Math.random() * 100 - 50)) + 'px';
-          conf.style.top = (rect.top + rect.height/2 + (Math.random() * 100 - 50)) + 'px';
-          conf.style.transform = `rotate(${Math.random() * 360}deg)`;
-          document.body.appendChild(conf);
-
-          const angle = Math.random() * Math.PI * 2;
-          const velocity = Math.random() * 150 + 50;
-          const tx = Math.cos(angle) * velocity;
-          const ty = Math.sin(angle) * velocity;
-
-          conf.animate([
-              { transform: `translate(0,0) rotate(0deg)`, opacity: 1 },
-              { transform: `translate(${tx}px, ${ty}px) rotate(360deg)`, opacity: 0 }
-          ], {
-              duration: 800,
-              easing: 'ease-out'
-          }).onfinish = () => conf.remove();
-       }
-   }
+// 获取用户状态
+fetch('/api/user')
+  .then(res => res.json())
+  .then(user => {
+    if (user.username) {
+      // 正式用户，显示信息面板
+      document.getElementById('userPanel').classList.remove('hidden');
+      document.getElementById('greeting').innerText = '👋 ' + user.username;
+      document.getElementById('studyDays').innerText = user.study_days || 1;
+      document.getElementById('pendingWords').innerText = user.pending_words || 0;
+      document.getElementById('logoutBtnPage').onclick = function() {
+        window.location.href = '/logout';
+      };
+    } else {
+      // 游客或未登录，显示登录面板
+      document.getElementById('loginPanel').classList.remove('hidden');
+    }
+  })
+  .catch(() => {
+    // 网络错误，也显示登录面板
+    document.getElementById('loginPanel').classList.remove('hidden');
+  });
 </script>
-
 </body>
 </html>
