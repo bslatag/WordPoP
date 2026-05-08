@@ -205,6 +205,7 @@ let currentView = 'cards';
 let globalDictionary = {};
 let fetchSeq = 0;
 
+// 加载词库到全局对象
 fetch('/api/dictionary')
   .then(res => res.json())
   .then(dict => { globalDictionary = dict; })
@@ -218,7 +219,6 @@ async function apiFetch(url, options = {}) {
   } catch (err) { console.error(err); return []; }
 }
 
-// 粘贴识别进度弹窗
 function showLoading(text) {
   const exist = document.getElementById('__loading__');
   if (exist) exist.innerText = text;
@@ -309,28 +309,64 @@ async function toggleStar(word) {
   refreshList(currentType);
 }
 
-// 手动添加按钮：自动判断单个单词或批量粘贴（含进度弹窗）
+// 用词库中的单词从左到右切割连续文本（解决无空格问题）
+function splitLongText(text, dictionary) {
+  const result = [];
+  const dictWords = Object.keys(dictionary);
+  if (dictWords.length === 0) return result;
+  dictWords.sort((a, b) => b.length - a.length); // 优先匹配长单词
+
+  let i = 0;
+  while (i < text.length) {
+    let matched = false;
+    for (const word of dictWords) {
+      if (text.startsWith(word, i)) {
+        result.push(word);
+        i += word.length;
+        matched = true;
+        break;
+      }
+    }
+    if (!matched) i++; // 跳过无法匹配的字符
+  }
+  return result;
+}
+
+// 手动添加按钮：自动判断单个单词或批量粘贴（含进度弹窗、无空格文本拆分）
 document.getElementById('manualAddBtn').onclick = async function() {
   const input = document.getElementById('manualAddInput');
   const raw = input.value.trim();
   if (!raw) return;
 
-  if (/\s/.test(raw)) {
-    // 批量粘贴处理（有进度弹窗）
-    const candidates = [...new Set(
-      (raw.match(/[a-zA-Z]{2,20}/g) || []).map(w => w.toLowerCase())
-    )];
+  // 判断是否为批量粘贴（有空格、换行或长度超过20）
+  if (/\s/.test(raw) || raw.length > 20) {
+    // 1. 先用正则提取有空格/换行分隔的单词
+    let candidates = (raw.match(/[a-zA-Z]{2,20}/g) || []).map(w => w.toLowerCase());
+
+    // 2. 对连续长串文本（超过20个字母且未被正则提取的）尝试用词库切割
+    const longTexts = raw.match(/[a-zA-Z]{21,}/g) || [];
+    for (const longText of longTexts) {
+      const lowerLong = longText.toLowerCase();
+      const splitWords = splitLongText(lowerLong, globalDictionary);
+      candidates = candidates.concat(splitWords);
+    }
+
+    // 去重
+    candidates = [...new Set(candidates)];
+
     if (candidates.length === 0) {
       alert('未发现有效英文单词，请检查粘贴内容');
       return;
     }
 
+    // 3. 逐词校验，只保留在词库中的单词
     showLoading('正在处理，请稍候...');
     const validWords = [];
     for (const w of candidates) {
       const check = await apiFetch(`/api/check-word?word=${w}`);
       if (check.valid) validWords.push(w);
     }
+
     if (validWords.length > 0) {
       for (const w of validWords) {
         await apiFetch('/api/add-to-list', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({word: w}) });
@@ -373,9 +409,11 @@ document.getElementById('startBtn').onclick = async function() {
     window.location.href = '/writing/practice';
   }
 };
+
 document.getElementById('cancelPracticeBtn').onclick = function() {
   document.getElementById('practiceModal').classList.remove('show');
 };
+
 document.getElementById('confirmPracticeBtn').onclick = function() {
   const rounds = document.getElementById('modalRoundsSelect').value;
   const order = document.getElementById('modalOrderSelect').value;
