@@ -158,25 +158,37 @@ def api_add_to_list():
     word = request.json.get('word', '').strip().lower()
     if not re.match(r'^[a-zA-Z]{2,20}$', word):
         return jsonify({'error': '无效单词格式'}), 400
+
     db = get_db()
+    # 检查词典中是否存在
     exists = db.execute("SELECT 1 FROM dictionary WHERE word = ?", (word,)).fetchone()
     if not exists:
+        # 联网查询释义
         meaning = ''
         try:
-            resp = requests.get(f'https://dict.youdao.com/suggest?q={word}&le=eng', timeout=3)
+            resp = requests.get(
+                f'https://dict.youdao.com/suggest?q={word}&le=eng',
+                timeout=3
+            )
             data = resp.json()
             if data.get('data') and data['data'].get('entries'):
                 entries = data['data']['entries']
                 if entries and entries[0].get('explain'):
                     meaning = entries[0]['explain']
-        except:
+        except Exception:
             pass
         if not meaning:
             meaning = '暂无释义'
-        db.execute("INSERT OR IGNORE INTO dictionary (word, meaning) VALUES (?, ?)", (word, meaning))
+        db.execute(
+            "INSERT OR IGNORE INTO dictionary (word, meaning) VALUES (?, ?)",
+            (word, meaning)
+        )
         db.commit()
 
-    db.execute("INSERT OR IGNORE INTO selfstudy_words (user_id, word) VALUES (?,?)", (user_id, word))
+    db.execute(
+        "INSERT OR IGNORE INTO selfstudy_words (user_id, word) VALUES (?, ?)",
+        (user_id, word)
+    )
     db.commit()
     return jsonify({'status': 'ok'})
 
