@@ -197,95 +197,70 @@
 </div>
 
 <script>
-    const loginForm = document.getElementById('loginForm');
-    const loginBtn = document.getElementById('loginBtn');
-    const loginBox = document.getElementById('loginBox');
-    const speedLines = document.getElementById('speedLines');
+   const loginForm = document.getElementById('loginForm');
+   const loginBtn = document.getElementById('loginBtn');
+   const loginBox = document.getElementById('loginBox');
+   const speedLines = document.getElementById('speedLines');
 
-    // 监听表单提交事件
-    loginForm.addEventListener('submit', function(e) {
-        // 1. 阻止默认的提交行为（防止页面立刻刷新）
-        e.preventDefault();
+   loginForm.addEventListener('submit', function(e) {
+ 
+       e.preventDefault();
 
-        // 2. 改变按钮状态，模拟“登录中”
-        const originalText = loginBtn.innerText;
-        loginBtn.innerText = '登录中...';
-        loginBtn.style.opacity = '0.7';
-        loginBtn.disabled = true; // 禁用按钮防止重复点击
+       triggerSuccessAnimation();
 
-        // 3. 模拟网络请求（假设需要 1 秒钟验证）
-        // 在实际项目中，这里应该是你的 AJAX/Fetch 请求
-        setTimeout(() => {
-            // 假设这里是服务器返回了 "登录成功"
-            // 只有在这里，我们才触发动画
-            triggerSuccessAnimation();
+       setTimeout(() => {
+           HTMLFormElement.prototype.submit.call(loginForm);
+       }, 1500);
+   });
 
-            // 4. 动画播放完后，真正跳转到学习页面
-            setTimeout(() => {
-                // window.location.href = '/study'; // 这里写你的跳转链接
-                loginBtn.innerText = '跳转中...';
-            }, 1500);
+   function triggerSuccessAnimation() {
+       loginBox.classList.add('shake-hard');
+       speedLines.style.opacity = '1';
+       speedLines.style.transition = 'opacity 0.2s';
 
-        }, 1000); // 1000毫秒 = 1秒
-    });
+       const bubble = document.createElement('div');
+       bubble.className = 'comic-bubble';
+       bubble.innerHTML = '<span class="bubble-text">走你！</span>';
+       document.body.appendChild(bubble);
 
-    // 专门负责动画的函数
-    function triggerSuccessAnimation() {
-        // A. 震动卡片
-        loginBox.classList.add('shake-hard');
+       void bubble.offsetWidth;
+       bubble.classList.add('active');
 
-        // B. 显示背景集中线
-        speedLines.style.opacity = '1';
-        speedLines.style.transition = 'opacity 0.2s';
+       createConfetti();
 
-        // C. 创建漫画气泡
-        const bubble = document.createElement('div');
-        bubble.className = 'comic-bubble';
-        bubble.innerHTML = '<span class="bubble-text">走你！</span>';
-        document.body.appendChild(bubble);
+       setTimeout(() => {
+           loginBox.classList.remove('shake-hard');
+           speedLines.style.opacity = '0';
+       }, 600);
+   }
 
-        // 强制重绘以触发动画
-        void bubble.offsetWidth; 
-        bubble.classList.add('active');
+   function createConfetti() {
+      const colors = ['#D1D067', '#0D21A5', '#FF6B9D', '#fff'];
+      const rect = loginBox.getBoundingClientRect();
+    
+      for(let i = 0; i < 30; i++) {
+          const conf = document.createElement('div');
+          conf.className = 'confetti';
+          conf.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+          conf.style.left = (rect.left + rect.width/2 + (Math.random() * 100 - 50)) + 'px';
+          conf.style.top = (rect.top + rect.height/2 + (Math.random() * 100 - 50)) + 'px';
+          conf.style.transform = `rotate(${Math.random() * 360}deg)`;
+          document.body.appendChild(conf);
 
-        // D. 撒花特效
-        createConfetti();
+          const angle = Math.random() * Math.PI * 2;
+          const velocity = Math.random() * 150 + 50;
+          const tx = Math.cos(angle) * velocity;
+          const ty = Math.sin(angle) * velocity;
 
-        // E. 清理动画类
-        setTimeout(() => {
-            loginBox.classList.remove('shake-hard');
-        }, 500);
-    }
-
-    function createConfetti() {
-        const colors = ['#D1D067', '#0D21A5', '#FF6B9D', '#fff'];
-        const rect = loginBox.getBoundingClientRect();
-        
-        for(let i=0; i<30; i++) {
-            const conf = document.createElement('div');
-            conf.className = 'confetti';
-            conf.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
-            
-            conf.style.left = (rect.left + rect.width/2 + (Math.random() * 100 - 50)) + 'px';
-            conf.style.top = (rect.top + rect.height/2 + (Math.random() * 100 - 50)) + 'px';
-            
-            conf.style.transform = `rotate(${Math.random() * 360}deg)`;
-            document.body.appendChild(conf);
-
-            const angle = Math.random() * Math.PI * 2;
-            const velocity = Math.random() * 150 + 50;
-            const tx = Math.cos(angle) * velocity;
-            const ty = Math.sin(angle) * velocity;
-
-            conf.animate([
-                { transform: `translate(0,0) rotate(0deg)`, opacity: 1 },
-                { transform: `translate(${tx}px, ${ty}px) rotate(360deg)`, opacity: 0 }
-            ], {
-                duration: 800,
-                easing: 'ease-out'
-            }).onfinish = () => conf.remove();
-        }
-    }
+          conf.animate([
+              { transform: `translate(0,0) rotate(0deg)`, opacity: 1 },
+              { transform: `translate(${tx}px, ${ty}px) rotate(360deg)`, opacity: 0 }
+          ], {
+              duration: 800,
+              easing: 'ease-out'
+          }).onfinish = () => conf.remove();
+       }
+   }
 </script>
 
 </body>
