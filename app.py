@@ -84,14 +84,17 @@ def api_user():
     user_id = get_current_user()
     db = get_db()
     user = db.execute("SELECT id, username, created_at FROM users WHERE id = ?", (user_id,)).fetchone()
-    
+
     pending = db.execute("SELECT COUNT(*) as count FROM learned_words WHERE user_id = ?", (user_id,)).fetchone()
     
-    from datetime import datetime
     days = 1
     if user['created_at']:
-        created = datetime.strptime(user['created_at'], '%Y-%m-%d %H:%M:%S')
-        days = (datetime.now() - created).days + 1
+        try:
+            from datetime import datetime
+            created = datetime.strptime(user['created_at'], '%Y-%m-%d %H:%M:%S')
+            days = (datetime.now() - created).days + 1
+        except:
+            days = 1
     
     return jsonify({
         'id': user['id'],
