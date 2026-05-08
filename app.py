@@ -36,6 +36,7 @@ def login():
         db = get_db()
         existing = db.execute("SELECT id FROM users WHERE username = ?", (username,)).fetchone()
         if existing:
+            # 已有用户：合并游客数据
             guest_id = session.get('user_id')
             if guest_id and guest_id != existing['id']:
                 for table in ['learned_words', 'starred_words', 'selfstudy_words']:
@@ -45,19 +46,14 @@ def login():
                                    (existing['id'], row['word']))
                 db.execute("DELETE FROM users WHERE id = ?", (guest_id,))
                 db.commit()
-            session['user_id'] = existing['id']
+            session['user_id'] = existing['id']   # ← 关键：设置 Session
         else:
-            guest_id = session.get('user_id')
-            if guest_id:
-                db.execute("UPDATE users SET username = ? WHERE id = ?", (username, guest_id))
-                db.commit()
-            else:
-                cursor = db.execute("INSERT INTO users (username) VALUES (?)", (username,))
-                db.commit()
-                session['user_id'] = cursor.lastrowid
-        return redirect(url_for('login'))
+            # 新用户注册
+            cursor = db.execute("INSERT INTO users (username) VALUES (?)", (username,))
+            db.commit()
+            session['user_id'] = cursor.lastrowid
+        return redirect(url_for('index'))
     return render_template('login.html')
-
 @app.route('/logout')
 def logout():
     session.clear()
