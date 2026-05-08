@@ -205,7 +205,6 @@ let currentView = 'cards';
 let globalDictionary = {};
 let fetchSeq = 0;
 
-// 加载词库到全局对象
 fetch('/api/dictionary')
   .then(res => res.json())
   .then(dict => { globalDictionary = dict; })
