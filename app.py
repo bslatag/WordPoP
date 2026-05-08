@@ -87,13 +87,15 @@ def api_user():
     db = get_db()
     user = db.execute("SELECT id, username, created_at FROM users WHERE id = ?", (user_id,)).fetchone()
     
-    # 统计已学单词数
+    # 统计已学单词数（待默写数量）
     pending = db.execute("SELECT COUNT(*) as count FROM learned_words WHERE user_id = ?", (user_id,)).fetchone()
     
-    # 计算已学习天数（从注册时间算起）
+    # 计算已学习天数
     from datetime import datetime
-    created = datetime.strptime(user['created_at'], '%Y-%m-%d %H:%M:%S')
-    days = (datetime.now() - created).days + 1  # 至少 1 天
+    days = 1
+    if user['created_at']:
+        created = datetime.strptime(user['created_at'], '%Y-%m-%d %H:%M:%S')
+        days = (datetime.now() - created).days + 1
     
     return jsonify({
         'id': user['id'],
