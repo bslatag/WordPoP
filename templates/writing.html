@@ -63,28 +63,6 @@ body {
   align-items: center;
   justify-content: center;
 }
-.list-wrapper {
-  position: relative;
-  width: 100%;
-  max-width: 480px;
-}
-.upload-corner-btn {
-  position: absolute;
-  top: -16px;
-  right: -16px;
-  width: 48px; height: 48px;
-  border-radius: 50%;
-  background: var(--accent-cyan);
-  color: #fff;
-  border: 3px solid var(--border-color);
-  font-size: 32px;
-  line-height: 1;
-  cursor: pointer;
-  z-index: 30;
-  display: none;
-  align-items: center;
-  justify-content: center;
-}
 .card {
   width: 100%;
   max-width: 480px;
@@ -162,7 +140,6 @@ body {
 }
 .modal-btn.primary { background: var(--accent-pink); color: white; }
 .modal-btn.secondary { background: var(--card-color); color: var(--text-color); }
-#fileInput { display: none; }
 </style>
 </head>
 <body>
@@ -176,10 +153,7 @@ body {
   <div class="card" onclick="showList('learned')"><h2>已学单词</h2></div>
   <div class="card" onclick="showList('selfstudy')"><h2>默写自习室</h2></div>
 
-  <div class="list-wrapper">
-    <div class="list-container" id="listBox"></div>
-    <button class="upload-corner-btn" id="uploadBtn" title="添加单词（拍照/图库）">＋</button>
-  </div>
+  <div class="list-container" id="listBox"></div>
 
   <div class="manual-add" id="manualAddBox">
     <input type="text" id="manualAddInput" placeholder="粘贴/输入单词">
@@ -225,9 +199,6 @@ body {
   </div>
 </div>
 
-<input type="file" id="fileInput" accept="image/*">
-
-<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script>
 let currentType = '';
 let currentView = 'cards';
@@ -247,6 +218,7 @@ async function apiFetch(url, options = {}) {
   } catch (err) { console.error(err); return []; }
 }
 
+// 粘贴识别进度弹窗
 function showLoading(text) {
   const exist = document.getElementById('__loading__');
   if (exist) exist.innerText = text;
@@ -254,7 +226,7 @@ function showLoading(text) {
     const el = document.createElement('div');
     el.id = '__loading__';
     el.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#000;color:#fff;padding:12px 24px;border-radius:8px;z-index:9999;';
-    el.innerText = text || '加载中...';
+    el.innerText = text || '处理中...';
     document.body.appendChild(el);
   }
 }
@@ -268,7 +240,6 @@ function showCards() {
   document.getElementById('listBox').style.display = 'none';
   document.getElementById('startBtn').style.display = 'none';
   document.getElementById('manualAddBox').style.display = 'none';
-  document.getElementById('uploadBtn').style.display = 'none';
   currentView = 'cards';
   document.getElementById('backBtn').onclick = () => { window.location.href = '/'; };
 }
@@ -282,7 +253,6 @@ async function showList(type) {
   document.querySelectorAll('.card').forEach(c => c.style.display = 'none');
   document.getElementById('listBox').style.display = 'block';
   document.getElementById('startBtn').style.display = 'block';
-  document.getElementById('uploadBtn').style.display = (type === 'selfstudy') ? 'flex' : 'none';
   document.getElementById('manualAddBox').style.display = (type === 'selfstudy') ? 'flex' : 'none';
   await refreshList(type);
   currentView = 'list';
@@ -297,14 +267,12 @@ async function refreshList(type) {
 
 function renderWordListDom(type, list) {
   const container = document.getElementById('listBox');
-  const btn = document.getElementById('uploadBtn');
   let child = container.firstChild;
   while (child) {
     const next = child.nextSibling;
-    if (child.id !== 'uploadBtn') container.removeChild(child);
+    container.removeChild(child);
     child = next;
   }
-  if (!container.contains(btn)) container.appendChild(btn);
 
   const fragment = document.createDocumentFragment();
   for (const w of list) {
@@ -341,12 +309,14 @@ async function toggleStar(word) {
   refreshList(currentType);
 }
 
+// 手动添加按钮：自动判断单个单词或批量粘贴（含进度弹窗）
 document.getElementById('manualAddBtn').onclick = async function() {
   const input = document.getElementById('manualAddInput');
   const raw = input.value.trim();
   if (!raw) return;
 
   if (/\s/.test(raw)) {
+    // 批量粘贴处理（有进度弹窗）
     const candidates = [...new Set(
       (raw.match(/[a-zA-Z]{2,20}/g) || []).map(w => w.toLowerCase())
     )];
@@ -354,6 +324,8 @@ document.getElementById('manualAddBtn').onclick = async function() {
       alert('未发现有效英文单词，请检查粘贴内容');
       return;
     }
+
+    showLoading('正在处理，请稍候...');
     const validWords = [];
     for (const w of candidates) {
       const check = await apiFetch(`/api/check-word?word=${w}`);
@@ -364,14 +336,17 @@ document.getElementById('manualAddBtn').onclick = async function() {
         await apiFetch('/api/add-to-list', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({word: w}) });
       }
       input.value = '';
-      refreshList('selfstudy');
+      await refreshList('selfstudy');
+      hideLoading();
       alert(`成功导入 ${validWords.length} 个单词`);
     } else {
+      hideLoading();
       alert('未找到在词库中的有效单词');
     }
     return;
   }
 
+  // 单个单词原有逻辑
   const word = raw.toLowerCase();
   if (!/^[a-zA-Z]{2,20}$/.test(word)) {
     alert('请输入有效的英文单词（2~20个字母）');
@@ -384,225 +359,6 @@ document.getElementById('manualAddBtn').onclick = async function() {
   await apiFetch('/api/add-to-list', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({word}) });
   input.value = '';
   refreshList('selfstudy');
-};
-
-document.getElementById('uploadBtn').onclick = function() {
-  document.getElementById('fileInput').click();
-};
-
-// ========== 图像预处理函数 ==========
-function otsuBinarize(imageData) {
-  const data = imageData.data;
-  const totalPixels = imageData.width * imageData.height;
-  const grayValues = new Float32Array(totalPixels);
-  let histogram = new Array(256).fill(0);
-
-  for (let i = 0; i < data.length; i += 4) {
-    const idx = i / 4;
-    const gray = 0.299 * data[i] + 0.587 * data[i+1] + 0.114 * data[i+2];
-    grayValues[idx] = gray;
-    histogram[Math.floor(gray)]++;
-  }
-
-  let sum = 0;
-  for (let i = 0; i < 256; i++) sum += i * histogram[i];
-  let sumB = 0, wB = 0, wF = 0, maxVariance = 0, threshold = 128;
-
-  for (let i = 0; i < 256; i++) {
-    wB += histogram[i];
-    if (wB === 0) continue;
-    wF = totalPixels - wB;
-    if (wF === 0) break;
-    sumB += i * histogram[i];
-    const mB = sumB / wB;
-    const mF = (sum - sumB) / wF;
-    const variance = wB * wF * (mB - mF) * (mB - mF);
-    if (variance > maxVariance) {
-      maxVariance = variance;
-      threshold = i;
-    }
-  }
-
-  for (let i = 0; i < data.length; i += 4) {
-    const idx = i / 4;
-    const val = grayValues[idx] > threshold ? 255 : 0;
-    data[i] = data[i+1] = data[i+2] = val;
-  }
-  return imageData;
-}
-
-function applyCLAHE(imageData, tileSize = 64, clipLimit = 2.0) {
-  const data = imageData.data;
-  const width = imageData.width;
-  const height = imageData.height;
-
-  const gray = new Uint8Array(width * height);
-  for (let i = 0; i < gray.length; i++) {
-    const p = i * 4;
-    gray[i] = data[p];
-  }
-
-  const xTiles = Math.ceil(width / tileSize);
-  const yTiles = Math.ceil(height / tileSize);
-  const mappings = new Array(xTiles * yTiles);
-
-  for (let ty = 0; ty < yTiles; ty++) {
-    for (let tx = 0; tx < xTiles; tx++) {
-      const hist = new Array(256).fill(0);
-      const xStart = tx * tileSize;
-      const yStart = ty * tileSize;
-      const xEnd = Math.min(xStart + tileSize, width);
-      const yEnd = Math.min(yStart + tileSize, height);
-      let count = 0;
-
-      for (let y = yStart; y < yEnd; y++) {
-        for (let x = xStart; x < xEnd; x++) {
-          hist[gray[y * width + x]]++;
-          count++;
-        }
-      }
-
-      const clipLimitVal = clipLimit * count / 256;
-      let clipped = 0;
-      for (let i = 0; i < 256; i++) {
-        if (hist[i] > clipLimitVal) {
-          clipped += hist[i] - clipLimitVal;
-          hist[i] = clipLimitVal;
-        }
-      }
-      const redist = clipped / 256;
-      for (let i = 0; i < 256; i++) {
-        hist[i] += redist;
-      }
-
-      const cdf = new Float64Array(256);
-      cdf[0] = hist[0];
-      for (let i = 1; i < 256; i++) {
-        cdf[i] = cdf[i - 1] + hist[i];
-      }
-      const total = cdf[255];
-      const map = new Uint8Array(256);
-      for (let i = 0; i < 256; i++) {
-        map[i] = Math.round((cdf[i] - cdf[0]) / (total - cdf[0]) * 255) || 0;
-      }
-      mappings[ty * xTiles + tx] = { xStart, yStart, xEnd, yEnd, map };
-    }
-  }
-
-  for (let y = 0; y < height; y++) {
-    const ty = Math.min(Math.floor(y / tileSize), yTiles - 2);
-    const tyNext = Math.min(ty + 1, yTiles - 1);
-    const v = (y - ty * tileSize) / tileSize;
-
-    for (let x = 0; x < width; x++) {
-      const tx = Math.min(Math.floor(x / tileSize), xTiles - 2);
-      const txNext = Math.min(tx + 1, xTiles - 1);
-      const u = (x - tx * tileSize) / tileSize;
-
-      const idx = y * width + x;
-      const val = gray[idx];
-
-      const m00 = mappings[ty * xTiles + tx].map[val];
-      const m10 = mappings[ty * xTiles + txNext].map[val];
-      const m01 = mappings[tyNext * xTiles + tx].map[val];
-      const m11 = mappings[tyNext * xTiles + txNext].map[val];
-
-      const newVal = Math.round(
-        (1 - u) * (1 - v) * m00 +
-        u * (1 - v) * m10 +
-        (1 - u) * v * m01 +
-        u * v * m11
-      );
-
-      const p = idx * 4;
-      data[p] = data[p + 1] = data[p + 2] = Math.min(255, Math.max(0, newVal));
-    }
-  }
-
-  return imageData;
-}
-
-// ========== OCR 识别主流程 ==========
-document.getElementById('fileInput').onchange = async function(e) {
-  const file = e.target.files[0];
-  if (!file) return;
-  this.value = '';
-  showLoading('识别中...');
-  try {
-    const img = await new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        const image = new Image();
-        image.onload = () => resolve(image);
-        image.onerror = reject;
-        image.src = ev.target.result;
-      };
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    });
-
-    const canvas = document.createElement('canvas');
-    canvas.width = img.width;
-    canvas.height = img.height;
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(img, 0, 0);
-
-    let imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-
-    // 1. 灰度化
-    const data = imageData.data;
-    for (let i = 0; i < data.length; i += 4) {
-      const gray = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
-      data[i] = data[i + 1] = data[i + 2] = gray;
-    }
-    ctx.putImageData(imageData, 0, 0);
-
-    // 2. CLAHE 增强对比度
-    applyCLAHE(imageData);
-    ctx.putImageData(imageData, 0, 0);
-
-    // 3. OTSU 二值化
-    otsuBinarize(imageData);
-    ctx.putImageData(imageData, 0, 0);
-
-    const processedDataUrl = canvas.toDataURL('image/png');
-
-    // 使用更稳健的 Tesseract 配置
-    const worker = await Tesseract.createWorker('eng', 1);
-    const { data: { text } } = await worker.recognize(processedDataUrl, {
-      tessedit_pageseg_mode: '4',
-    });
-    await worker.terminate();
-
-    const candidates = [...new Set((text.match(/[a-zA-Z]{2,20}/g) || []).map(w => w.toLowerCase()))];
-
-    if (candidates.length === 0) {
-      hideLoading();
-      alert('未识别到字母，请重拍');
-      return;
-    }
-
-    const validWords = [];
-    for (const w of candidates) {
-      const check = await apiFetch(`/api/check-word?word=${w}`);
-      if (check.valid) validWords.push(w);
-    }
-
-    if (validWords.length > 0) {
-      for (const w of validWords) {
-        await apiFetch('/api/add-to-list', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({word: w}) });
-      }
-      refreshList('selfstudy');
-      hideLoading();
-      alert(`成功添加 ${validWords.length} 个单词`);
-    } else {
-      hideLoading();
-      alert('无有效单词（词库过滤），可手动添加');
-    }
-  } catch (err) {
-    hideLoading();
-    alert('识别失败，请重试');
-  }
 };
 
 document.getElementById('startBtn').onclick = async function() {
