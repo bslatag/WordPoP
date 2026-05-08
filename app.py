@@ -1,6 +1,5 @@
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for, g
-import sqlite3, random, os, re, io, pytesseract, requests
-from PIL import Image, ImageFilter
+import sqlite3, random, os, re
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'wordpop-secret-key')
@@ -18,7 +17,6 @@ def close_connection(exception):
     if db is not None:
         db.close()
 
-# ── 用户系统 ──
 def get_current_user():
     user_id = session.get('user_id')
     if user_id:
@@ -57,7 +55,7 @@ def login():
                 cursor = db.execute("INSERT INTO users (username) VALUES (?)", (username,))
                 db.commit()
                 session['user_id'] = cursor.lastrowid
-        return redirect(url_for('index'))
+        return redirect(url_for('login'))
     return render_template('login.html')
 
 @app.route('/logout')
@@ -87,10 +85,8 @@ def api_user():
     db = get_db()
     user = db.execute("SELECT id, username, created_at FROM users WHERE id = ?", (user_id,)).fetchone()
     
-    # 统计已学单词数（待默写数量）
     pending = db.execute("SELECT COUNT(*) as count FROM learned_words WHERE user_id = ?", (user_id,)).fetchone()
     
-    # 计算已学习天数
     from datetime import datetime
     days = 1
     if user['created_at']:
@@ -104,6 +100,7 @@ def api_user():
         'study_days': days,
         'pending_words': pending['count'] if pending else 0
     })
+
 @app.route('/api/study-words')
 def api_study_words():
     user_id = get_current_user()
@@ -240,51 +237,6 @@ def api_skip_word():
             new_word = {'单词': row['word'], '释义': row['meaning'], '音标': row['phonetic']}
             break
     return jsonify({'new_word': new_word})
-
-# ── OCR（最终稳定版）──
-@app.route('/api/ocr', methods=['POST'])
-def api_ocr():
-    if 'image' not in request.files:
-        return jsonify({'words': [], 'error': 'no image'}), 400
-    file = request.files['image']
-    img_bytes = file.read()
-    try:
-        img = Image.open(io.BytesIO(img_bytes)).convert('L')
-    except Exception:
-        return jsonify({'words': [], 'error': '图片无法解析'}), 400
-
-    # 缩放至合理尺寸，加快识别
-    w, h = img.size
-    max_size = 1500
-    if w > max_size or h > max_size:
-        img.thumbnail((max_size, max_size), Image.LANCZOS)
-
-    # 轻度锐化
-    img = img.filter(ImageFilter.SHARPEN)
-
-    # 做适度二值化（阈值 140），既保留细节，又去除背景噪音
-    img = img.point(lambda x: 0 if x < 140 else 255)
-
-    try:
-        # 使用 PSM 3 全自动，不限制字符，让 Tesseract 自由发挥
-        text = pytesseract.image_to_string(img, lang='eng', config='--psm 3')
-    except Exception as e:
-        return jsonify({'words': [], 'error': f'识别出错: {str(e)}'}), 500
-
-    candidates = re.findall(r'[a-zA-Z]{2,20}', text.lower())
-    db = get_db()
-    rows = db.execute("SELECT word, meaning FROM dictionary").fetchall()
-    word_meaning_map = {row['word']: row['meaning'] for row in rows}
-    valid_set = set(word_meaning_map.keys())
-
-    seen = set()
-    result = []
-    for w in candidates:
-        if w in valid_set and w not in seen:
-            seen.add(w)
-            result.append({'word': w, 'meaning': word_meaning_map.get(w, '暂无释义')})
-
-    return jsonify({'words': result, 'raw_count': len(candidates), 'filtered_count': len(result)})
 
 if __name__ == '__main__':
     with app.app_context():
