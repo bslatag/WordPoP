@@ -266,21 +266,18 @@ async function refreshList(type) {
 
 function renderWordListDom(type, list) {
   const container = document.getElementById('listBox');
-  const btn = document.getElementById('uploadBtn');
   let child = container.firstChild;
   while (child) {
     const next = child.nextSibling;
-    if (child.id !== 'uploadBtn') container.removeChild(child);
+    container.removeChild(child);
     child = next;
   }
-  if (!container.contains(btn)) container.appendChild(btn);
 
   const fragment = document.createDocumentFragment();
   for (const w of list) {
     const item = document.createElement('div');
     item.className = 'word-item';
 
-    // 优先使用接口返回的 meaning；如果没有，再从 globalDictionary 取
     const wordText = typeof w === 'object' ? w.word : w;
     let meaningText = '';
     if (typeof w === 'object' && w.meaning && w.meaning !== '暂无释义') {
@@ -288,7 +285,6 @@ function renderWordListDom(type, list) {
     } else if (globalDictionary[wordText]) {
       meaningText = globalDictionary[wordText];
     } else {
-      // 为了避免阻塞渲染，异步更新
       meaningText = '…';
       fetch(`/api/check-word?word=${wordText}`)
         .then(res => res.json())
@@ -306,25 +302,6 @@ function renderWordListDom(type, list) {
     const starHTML = (type === 'starred') ? `<span class="star active" onclick="toggleStar('${wordText}')">★</span>` : '';
     const delHTML = (type === 'selfstudy') ? `<button class="del-btn" onclick="deleteWord('${wordText}')">✕</button>` : '';
 
-    item.innerHTML = `
-      <div class="word-text"><span>${wordText}</span>${meaningHTML}</div>
-      <div class="actions">${starHTML}${speakBtnHTML}${delHTML}</div>
-    `;
-    fragment.appendChild(item);
-  }
-  container.appendChild(fragment);
-}
-
-  const fragment = document.createDocumentFragment();
-  for (const w of list) {
-    const item = document.createElement('div');
-    item.className = 'word-item';
-    const wordText = typeof w === 'object' ? w.word : w;
-    const meaningText = typeof w === 'object' ? (w.meaning || globalDictionary[wordText] || '') : (globalDictionary[wordText] || '');
-    const meaningHTML = meaningText ? `<span class="meaning-text">${meaningText}</span>` : '';
-    const speakBtnHTML = (type === 'selfstudy') ? `<button class="speak-small" onclick="speakWord('${wordText}')">🔊</button>` : '';
-    const starHTML = (type === 'starred') ? `<span class="star active" onclick="toggleStar('${wordText}')">★</span>` : '';
-    const delHTML = (type === 'selfstudy') ? `<button class="del-btn" onclick="deleteWord('${wordText}')">✕</button>` : '';
     item.innerHTML = `
       <div class="word-text"><span>${wordText}</span>${meaningHTML}</div>
       <div class="actions">${starHTML}${speakBtnHTML}${delHTML}</div>
@@ -355,8 +332,7 @@ function splitLongText(text, dictionary) {
   const result = [];
   const dictWords = Object.keys(dictionary);
   if (dictWords.length === 0) return result;
-  dictWords.sort((a, b) => b.length - a.length); // 优先匹配长单词
-
+  dictWords.sort((a, b) => b.length - a.length);
   let i = 0;
   while (i < text.length) {
     let matched = false;
@@ -373,25 +349,20 @@ function splitLongText(text, dictionary) {
   return result;
 }
 
-// 判断单个单词或批量粘贴
+// 添加按钮
 document.getElementById('manualAddBtn').onclick = async function() {
   const input = document.getElementById('manualAddInput');
   const raw = input.value.trim();
   if (!raw) return;
 
-  // 判断是否为批量粘贴（有空格、换行或长度超过20）
   if (/\s/.test(raw) || raw.length > 20) {
-    // 1. 先用正则提取有空格/换行分隔的单词
     let candidates = (raw.match(/[a-zA-Z]{2,20}/g) || []).map(w => w.toLowerCase());
-
-    // 2. 对连续长串文本（超过20个字母且未被正则提取的）尝试用词库切割
     const longTexts = raw.match(/[a-zA-Z]{21,}/g) || [];
     for (const longText of longTexts) {
       const lowerLong = longText.toLowerCase();
       const splitWords = splitLongText(lowerLong, globalDictionary);
       candidates = candidates.concat(splitWords);
     }
-
     candidates = [...new Set(candidates)];
 
     if (candidates.length === 0) {
@@ -399,7 +370,6 @@ document.getElementById('manualAddBtn').onclick = async function() {
       return;
     }
 
-    // 逐词校验，只保留在词库中的单词
     showLoading('正在处理，请稍候...');
     const validWords = [];
     for (const w of candidates) {
@@ -422,7 +392,6 @@ document.getElementById('manualAddBtn').onclick = async function() {
     return;
   }
 
-  // 单个单词逻辑
   const word = raw.toLowerCase();
   if (!/^[a-zA-Z]{2,20}$/.test(word)) {
     alert('请输入有效的英文单词（2~20个字母）');
