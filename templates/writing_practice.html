@@ -212,7 +212,7 @@ function check() {
   if (answerShown) {
     if (val === ans) {
       prog.correct=0; prog.wrong=0; answerShown=false;
-      flashInfo('已重置，继续前进','#00D2BE',800); inputBox.value=''; setTimeout(randWord,800);
+      flashInfo('正确','#00D2BE',800); inputBox.value=''; setTimeout(randWord,800);
     } else { flashInfo('请正确输入上方单词','#ff4444',1200); inputBox.value=''; }
     return;
   }
