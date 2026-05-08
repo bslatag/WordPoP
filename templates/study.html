@@ -310,24 +310,27 @@ body {
 let currentGroup = [];
 let index = 0;
 
-// ---------- 发音（终极修复） ----------
-let speechReady = false;
-function warmUpSpeech() {
-  if (speechReady) return;
-  const u = new SpeechSynthesisUtterance('');
-  u.volume = 0;
-  window.speechSynthesis.speak(u);
-  speechReady = true;
+// 语音引擎预热（在首次触摸时无声激活）
+let speechPreheated = false;
+function preheatSpeech() {
+  if (!speechPreheated) {
+    const u = new SpeechSynthesisUtterance('');
+    u.volume = 0;
+    u.rate = 1;
+    window.speechSynthesis.speak(u);
+    speechPreheated = true;
+  }
 }
 
+// 核心发音函数（同步调用，无任何延迟）
 function speak(lang) {
   const text = document.getElementById('word').textContent;
   if (!text) return;
-  window.speechSynthesis.cancel();
+  window.speechSynthesis.cancel();          // 立即取消当前语音
   const u = new SpeechSynthesisUtterance(text);
   u.lang = lang;
   u.rate = 0.9;
-  window.speechSynthesis.speak(u);
+  window.speechSynthesis.speak(u);          // 同步播放，满足 iOS 要求
 
   const tip = document.getElementById('voiceTip');
   tip.textContent = lang === 'en-GB' ? '🇬🇧 英音' : '🇺🇸 美音';
@@ -335,25 +338,59 @@ function speak(lang) {
   setTimeout(() => tip.classList.remove('show'), 1200);
 }
 
+// 拖拽视觉 + 发音
 const speakBtn = document.getElementById('speakBtn');
 let startY = 0;
 let hasMoved = false;
-let lastSpeakTime = 0;
 
+// 手指按下
+speakBtn.addEventListener('touchstart', (e) => {
+  preheatSpeech();                          // 预热引擎
+  startY = e.touches[0].clientY;
+  hasMoved = false;
+  speakBtn.style.transition = 'none';
+  e.preventDefault();                       // 防止页面滚动
+});
+
+// 手指移动
+speakBtn.addEventListener('touchmove', (e) => {
+  if (startY === 0) return;
+  let dy = e.touches[0].clientY - startY;
+  if (Math.abs(dy) > 5) {
+    hasMoved = true;
+  }
+  dy = Math.max(-80, Math.min(80, dy));
+  speakBtn.style.transform = `translateY(-50%) translateY(${dy}px)`;
+  e.preventDefault();
+});
+
+// 手指抬起，执行发音
+speakBtn.addEventListener('touchend', (e) => {
+  if (startY === 0) return;
+  const dy = e.touches[0] ? e.touches[0].clientY - startY : e.changedTouches[0].clientY - startY;
+  startY = 0;
+  // 回弹动画
+  speakBtn.style.transition = 'transform 0.3s ease';
+  speakBtn.style.transform = 'translateY(-50%)';
+
+  if (hasMoved) {
+    const lang = dy > 30 ? 'en-US' : (dy < -30 ? 'en-GB' : null);
+    if (lang) {
+      speak(lang);            // 同步触发
+    }
+  }
+  hasMoved = false;
+  e.preventDefault();         // 阻止任何后续的 click 事件
+});
+
+// 桌面端鼠标事件（同样逻辑）
 speakBtn.addEventListener('mousedown', (e) => {
-  warmUpSpeech();
+  preheatSpeech();
   startY = e.clientY;
   hasMoved = false;
   speakBtn.style.transition = 'none';
   e.preventDefault();
 });
-speakBtn.addEventListener('touchstart', (e) => {
-  warmUpSpeech();
-  startY = e.changedTouches[0].clientY;
-  hasMoved = false;
-  speakBtn.style.transition = 'none';
-});
-
 document.addEventListener('mousemove', (e) => {
   if (!startY) return;
   let dy = e.clientY - startY;
@@ -361,51 +398,20 @@ document.addEventListener('mousemove', (e) => {
   dy = Math.max(-80, Math.min(80, dy));
   speakBtn.style.transform = `translateY(-50%) translateY(${dy}px)`;
 });
-document.addEventListener('touchmove', (e) => {
+document.addEventListener('mouseup', (e) => {
   if (!startY) return;
-  let dy = e.changedTouches[0].clientY - startY;
-  if (Math.abs(dy) > 5) hasMoved = true;
-  dy = Math.max(-80, Math.min(80, dy));
-  speakBtn.style.transform = `translateY(-50%) translateY(${dy}px)`;
-  e.preventDefault();
-}, { passive: false });
-
-function finishDrag(clientY) {
-  if (!startY) return;
-  const dy = clientY - startY;
+  const dy = e.clientY - startY;
   startY = 0;
   speakBtn.style.transition = 'transform 0.3s ease';
   speakBtn.style.transform = 'translateY(-50%)';
   if (hasMoved) {
-    const lang = dy < -20 ? 'en-GB' : (dy > 20 ? 'en-US' : null);
-    if (lang) {
-      speak(lang);
-      lastSpeakTime = Date.now();
-    }
+    const lang = dy > 20 ? 'en-US' : (dy < -20 ? 'en-GB' : null);
+    if (lang) speak(lang);
   }
   hasMoved = false;
-}
-
-document.addEventListener('mouseup', (e) => {
-  if (!startY) return;
-  finishDrag(e.clientY);
 });
 
-speakBtn.addEventListener('touchend', (e) => {
-  if (!startY) return;
-  finishDrag(e.changedTouches[0].clientY);
-  e.preventDefault(); // 阻止后续模拟 click
-});
-
-// 阻止任何 click 导致的发音
-speakBtn.addEventListener('click', (e) => {
-  e.preventDefault();
-  // 如果离上次发音不到半秒，可能是 iOS 的模拟 click，完全忽略
-  if (Date.now() - lastSpeakTime < 500) return;
-  // 纯点击不发音
-});
-
-// ---------- 左右滑动切词 ----------
+// 左右滑动切词（保持不变）
 let startX = 0;
 document.addEventListener('mousedown', e => { startX = e.clientX; });
 document.addEventListener('mouseup', e => {
@@ -418,9 +424,10 @@ document.addEventListener('touchend', e => {
   if (Math.abs(dx) > 100) dx < 0 ? nextWord() : prevWord();
 });
 
-// ---------- 收藏 ----------
+// ========== 收藏 ==========
 function getStarred() { return JSON.parse(localStorage.getItem('starred_list') || '[]'); }
 function setStarred(list) { localStorage.setItem('starred_list', JSON.stringify(list)); }
+
 document.getElementById('starBtn').onclick = async function() {
   const w = currentGroup[index]?.单词;
   if (!w) return;
@@ -436,11 +443,12 @@ document.getElementById('starBtn').onclick = async function() {
   document.getElementById('starBtn').classList.toggle('active', data.action === 'added');
 };
 
-// ---------- 进度 & 单词显示 ----------
+// ========== 进度 & 单词显示 ==========
 function updateCount() {
   const left = currentGroup.length - index;
   document.getElementById('count').textContent = `剩余：${left}`;
 }
+
 function showWord() {
   if (!currentGroup.length || index >= currentGroup.length) {
     markLearned(currentGroup.map(w => w.单词));
@@ -451,13 +459,16 @@ function showWord() {
   document.getElementById('word').textContent = w.单词 || '';
   document.getElementById('phonetic').textContent = w.音标 || '';
   document.getElementById('meaning').textContent = w.释义 || '';
+
   document.querySelector('.word-content').style.display = 'flex';
   document.querySelector('.meaning-content').style.display = 'none';
   cardBox.classList.remove('flipped');
+
   const sb = document.getElementById('starBtn');
   if (getStarred().includes(w.单词)) sb.classList.add('active');
   else sb.classList.remove('active');
 }
+
 function nextWord() {
   index++;
   updateCount();
@@ -468,6 +479,7 @@ function nextWord() {
   }
   showWord();
 }
+
 function prevWord() {
   if (index > 0) {
     index--;
@@ -476,7 +488,7 @@ function prevWord() {
   }
 }
 
-// ---------- 跳过 ----------
+// ========== 跳过按钮 ==========
 document.getElementById('skipBtn').onclick = async () => {
   if (!currentGroup.length || index >= currentGroup.length) return;
   const oldWord = currentGroup[index];
@@ -505,7 +517,7 @@ document.getElementById('skipBtn').onclick = async () => {
   }
 };
 
-// ---------- 翻转卡片 ----------
+// ========== 翻转卡片 ==========
 document.getElementById('cardBox').addEventListener('click', () => {
   const cb = document.getElementById('cardBox');
   const front = document.querySelector('.word-content');
@@ -520,10 +532,12 @@ document.getElementById('cardBox').addEventListener('click', () => {
     back.style.display = 'none';
   }
 });
+
 document.getElementById('backBtn').onclick = () => {
   window.location.href = '/';
 };
 
+// ========== 标记已学 ==========
 async function markLearned(words) {
   if (!words.length) return;
   try {
@@ -535,6 +549,7 @@ async function markLearned(words) {
   } catch (e) {}
 }
 
+// ========== 登录提示 ==========
 async function checkAndPromptLogin() {
   try {
     const data = await fetch('/api/user').then(r => r.json());
@@ -544,6 +559,7 @@ async function checkAndPromptLogin() {
   } catch (e) {}
 }
 
+// ========== 初始化学习 ==========
 async function initStudy() {
   let data = [];
   try {
@@ -561,6 +577,7 @@ async function initStudy() {
   index = 0;
   updateCount();
   showWord();
+
   try {
     const starred = await fetch('/api/word-list/starred').then(r => r.json());
     setStarred(starred);
@@ -572,6 +589,7 @@ async function initStudy() {
   } catch (e) {}
 }
 
+// 登录提示按钮
 document.getElementById('laterLoginBtn').onclick = () => document.getElementById('loginPromptModal').classList.remove('show');
 document.getElementById('goLoginBtn').onclick = () => window.location.href = '/login';
 document.getElementById('continueBtn').onclick = () => { document.getElementById('modal').classList.remove('show'); initStudy(); };
